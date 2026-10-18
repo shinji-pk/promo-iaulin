@@ -1,17 +1,7 @@
-# Privacidade — PromoBridge V1
+# Privacidade
 
-## Onde os dados ficam
+Configurações, ofertas, feedback e atividade ficam no SQLite do computador. O worker processa mensagens somente dos grupos selecionados e ignora o próprio destino. Não arquiva conversas completas nem baixa mídia pesada automaticamente.
 
-Na execução local, configurações, sessão vinculada do WhatsApp, fila/histórico e banco SQLite ficam na pasta `data/` do próprio computador.
+A retenção e a limpeza podem ser controladas no painel. Preserve histórico suficiente para a janela de repetição configurada. O backup não inclui credenciais da sessão.
 
-## O que o projeto processa
-
-O bot processa apenas mensagens recebidas nos grupos de origem que o usuário selecionou. O conteúdo necessário para a automação pode ser gravado localmente no histórico para diagnóstico, fila e prevenção de repetição.
-
-## O que não deve ser publicado
-
-A pasta `data/` é ignorada pelo Git. Ela pode conter sessão do WhatsApp e histórico local. Nunca a envie manualmente para GitHub, Vercel ou terceiros.
-
-## Serviços externos
-
-Os links de produtos são acessados pela internet para resolver redirecionamentos. O WhatsApp é acessado por uma biblioteca não oficial que opera como cliente Web vinculado. Esta V1 não envia as mensagens para uma API de IA paga.
+O WhatsApp se comunica com o serviço da Meta; a resolução de links se comunica com os sites de destino. Não há serviço pago de IA nem telemetria de produto implementada. A demonstração hospedada guarda suas alterações apenas naquele navegador e não controla o WhatsApp.

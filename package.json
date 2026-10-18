@@ -1,23 +1,50 @@
 {
-  "name": "whatsapp-promo-bot-v1",
-  "version": "1.0.0",
+  "name": "promobridge",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "Bot local para captar promoções no WhatsApp, converter links para afiliação própria e republicar em grupo configurado.",
   "engines": {
-    "node": ">=22"
+    "node": ">=24.0.0 <25"
   },
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "node --watch src/index.js",
-    "test": "node --test tests/*.test.js",
-    "check": "node scripts/check-syntax.mjs"
+    "dev": "concurrently -k \"npm run worker:dev\" \"npm run web:dev\"",
+    "worker:dev": "tsx watch apps/worker/src/index.ts",
+    "web:dev": "vite --config apps/web/vite.config.ts",
+    "build": "tsc --noEmit && vite build --config apps/web/vite.config.ts",
+    "start": "tsx apps/worker/src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/core.test.ts tests/resolver.test.ts tests/whatsapp.test.ts",
+    "test:integration": "vitest run tests/api.test.ts",
+    "test:e2e": "playwright test",
+    "check": "npm run lint && npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "latest",
-    "better-sqlite3": "^13.0.3",
-    "express": "^5.1.0",
-    "pino": "^9.9.0",
-    "qrcode": "^1.5.4"
+    "@whiskeysockets/baileys": "6.7.24",
+    "express": "5.3.0",
+    "lucide-react": "0.468.0",
+    "pino": "10.4.0",
+    "qrcode": "1.5.4",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.64.1",
+    "@types/express": "5.0.3",
+    "@types/node": "24.10.0",
+    "@types/qrcode": "1.5.6",
+    "@types/react": "19.1.16",
+    "@types/react-dom": "19.1.9",
+    "@vitejs/plugin-react": "6.1.2",
+    "concurrently": "9.2.5",
+    "eslint": "10.12.0",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.71.2",
+    "vite": "8.3.4",
+    "vitest": "5.0.5"
   }
 }

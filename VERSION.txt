@@ -1,3 +1,2 @@
-PromoBridge V1.0.0
-Data: 2026-10-15
-Estado: V1 funcional local / painel configurável / integrações de afiliado por calibração segura
+PromoBridge 2.0.0
+Worker local persistente + painel web demonstrativo no Vercel.

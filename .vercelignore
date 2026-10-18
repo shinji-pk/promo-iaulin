@@ -1,0 +1,10 @@
+data
+auth
+.env*
+node_modules
+test-results
+playwright-report
+*.sqlite*
+*.db*
+*.zip
+.git

@@ -1,15 +1,4 @@
-COMO SUBIR ESTE PROJETO PELO SITE DO GITHUB
-
-1. EXTRAIA o arquivo ZIP no seu computador.
-2. Abra seu repositório privado no GitHub.
-3. Clique em Add file > Upload files.
-4. Abra a pasta extraída PromoBridge-GitHub-Ready.
-5. Selecione TODOS os arquivos e pastas que estão DENTRO dela e arraste para a tela do GitHub.
-6. Aguarde terminar o upload.
-7. Em Commit changes, escreva: Add PromoBridge V1
-8. Clique em Commit changes.
-
-IMPORTANTE:
-- Não envie o ZIP fechado como único arquivo. O GitHub precisa receber os arquivos extraídos.
-- Não envie arquivos .env reais, sessão do WhatsApp, banco local, tokens, cookies ou senhas.
-- O .gitignore deste projeto já foi preparado para proteger dados locais comuns.
+O projeto completo agora está organizado em apps/, packages/, tests/ e docs/.
+Não envie node_modules/, data/, sessão do WhatsApp, bancos ou backups ao GitHub.
+O painel do Vercel é gerado com npm run build em apps/web/dist.
+Para uso real, siga README.md e mantenha o worker rodando no computador.
