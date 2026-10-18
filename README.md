@@ -1,10 +1,12 @@
-# PromoBridge V1
+# promo-iaulin — PromoBridge V1
+
+> **Estado do repositório:** este checkout contém somente documentação e `package.json`. As pastas `src/`, `panel/`, `config/`, `scripts/` e `tests/` não foram enviadas ao GitHub. Por isso, `npm start`, `npm run check` e `npm test` falham por arquivos ausentes. É necessário recuperar o pacote original completo antes de instalar, iniciar ou publicar o painel. As funcionalidades abaixo descrevem o projeto esperado; não estão verificadas neste repositório incompleto.
 
 Bot local para **captar mensagens de promoção em grupos do WhatsApp**, identificar links de lojas suportadas, remover rastreamento/afiliação anterior, aplicar a sua configuração de afiliado, reescrever a mensagem e encaminhar a oferta para o grupo de destino.
 
 > **Importante:** a conexão com WhatsApp nesta V1 usa Baileys (integração não oficial via WhatsApp Web). Não é a API oficial da Meta. Existe risco de restrição da conta; use preferencialmente um número separado, sem spam e apenas nos grupos necessários.
 
-## O que a V1 já faz
+## Funcionalidades descritas para a V1 completa
 
 - Conecta por QR Code como dispositivo vinculado.
 - Lista seus grupos automaticamente.
@@ -25,14 +27,15 @@ Bot local para **captar mensagens de promoção em grupos do WhatsApp**, identif
 
 ## Como instalar no Windows
 
-1. Instale **Node.js 22 ou superior**.
-2. Extraia esta pasta.
-3. Dê dois cliques em `scripts/01-INSTALAR.bat`.
-4. Depois dê dois cliques em `scripts/02-INICIAR-BOT.bat`.
-5. O painel abrirá no navegador.
-6. Escaneie o QR Code do WhatsApp.
-7. Escolha grupos, configure afiliados e salve.
-8. Comece em **Modo Manual** até validar todos os links.
+1. Recupere os arquivos ausentes do pacote original completo. Os atalhos dos próximos passos ainda não existem neste checkout.
+2. Instale **Node.js 22 ou superior**.
+3. Extraia esta pasta.
+4. Dê dois cliques em `scripts/01-INSTALAR.bat`.
+5. Depois dê dois cliques em `scripts/02-INICIAR-BOT.bat`.
+6. O painel abrirá no navegador.
+7. Escaneie o QR Code do WhatsApp.
+8. Escolha grupos, configure afiliados e salve.
+9. Comece em **Modo Manual** até validar todos os links.
 
 ## Dados privados
 
@@ -63,7 +66,7 @@ Se uma plataforma usar link opaco, assinatura temporária, cookie ou API privada
 
 Recomendação:
 
-- Repositório: `whatsapp-promo-bot`
+- Repositório existente: `shinji-pk/promo-iaulin` (nome do produto: PromoBridge).
 - Visibilidade: **Private**
 - Descrição: `Bot local para identificar promoções, converter links de afiliados e publicar ofertas automaticamente no WhatsApp.`
 
@@ -71,7 +74,9 @@ Suba o projeto inteiro, **exceto o que já estiver bloqueado pelo `.gitignore`**
 
 ## Vercel
 
-O projeto pode ter o **painel estático** publicado no Vercel escolhendo a pasta `panel` como Root Directory. Porém o **motor do WhatsApp não deve rodar em Vercel Functions**, pois ele precisa manter uma conexão WebSocket contínua. O painel hospedado serve como interface/preview; para operar a V1, use o painel local aberto pelo próprio bot.
+O GitHub informa a URL `https://promo-iaulin-mkce.vercel.app`. Sua disponibilidade e o vínculo com o commit atual ainda não foram verificados; as requisições externas foram bloqueadas pela política de rede deste ambiente.
+
+Após recuperar a pasta `panel/`, o projeto pode ter o **painel estático** publicado no Vercel escolhendo essa pasta como Root Directory. No checkout atual não existe uma página para publicar. O **motor do WhatsApp não deve rodar em Vercel Functions**, pois ele precisa manter uma conexão WebSocket contínua. O painel hospedado serve como interface/preview; para operar a V1, use o painel local aberto pelo próprio bot.
 
 Para operação 24h sem deixar seu computador ligado, a evolução correta é mover o motor para um VPS/servidor persistente — não para uma função serverless comum.
 

@@ -1,3 +1,3 @@
 PromoBridge V1.0.0
 Data: 2026-10-15
-Estado: V1 funcional local / painel configurável / integrações de afiliado por calibração segura
+Estado do checkout: incompleto; somente documentação e metadados. Código, painel, scripts e testes ausentes. Operação local e publicação não verificáveis até recuperar o pacote original.

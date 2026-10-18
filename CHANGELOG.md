@@ -1,5 +1,9 @@
 # Changelog
 
+## Estado do checkout
+
+O histórico abaixo descreve o pacote original. O envio atual ao GitHub não inclui o código, o painel ou os testes; portanto, essas funcionalidades ainda não foram verificadas neste repositório. Consulte `README.md` para os arquivos que precisam ser recuperados.
+
 ## 1.0.0 — 2026-10-15
 
 - Conexão WhatsApp via Baileys com QR Code.

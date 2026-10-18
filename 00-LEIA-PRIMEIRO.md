@@ -1,6 +1,10 @@
+# Atenção: envio incompleto ao GitHub
+
+Este repositório ainda não contém `src/`, `panel/`, `config/`, `scripts/` nem `tests/`. Recupere essas pastas do pacote original antes de seguir as instruções abaixo. Não há bot ou painel executável neste checkout; consulte o estado atual em `README.md`.
+
 # PromoBridge — Projeto Mestre
 
-Este repositório contém a V1 do PromoBridge, um bot local para captar promoções em grupos autorizados do WhatsApp, identificar links de marketplaces, remover rastreamento/afiliação anterior quando possível, gerar o link afiliado da proprietária, reescrever a oferta e publicar no grupo de destino com o mínimo possível de trabalho manual.
+Este repositório documenta a V1 do PromoBridge, um bot local planejado para captar promoções em grupos autorizados do WhatsApp, identificar links de marketplaces, remover rastreamento/afiliação anterior quando possível, gerar o link afiliado da proprietária, reescrever a oferta e publicar no grupo de destino com o mínimo possível de trabalho manual. O código necessário não está presente neste checkout.
 
 ## Princípio principal
 
@@ -55,6 +59,6 @@ Nunca commitar sessão do WhatsApp, banco local, cookies, tokens ou credenciais.
 
 ## Estado desta V1
 
-A base atual inclui painel local, configuração, fila, SQLite, pipeline, integração WhatsApp, resolvedor de links, reescrita de mensagens e módulos separados por marketplace. Alguns marketplaces ainda exigem calibração/integração específica com os dados reais de afiliado antes de publicação automática confiável.
+O pacote completo descrito nesta documentação deve incluir painel local, configuração, fila, SQLite, pipeline, integração WhatsApp, resolvedor de links, reescrita de mensagens e módulos separados por marketplace. Esses componentes precisam ser recuperados antes da validação. Alguns marketplaces ainda exigem calibração/integração específica com os dados reais de afiliado antes de publicação automática confiável.
 
 O objetivo de futuras versões é reduzir ao mínimo a intervenção manual e manter uma interface bonita, moderna, limpa, responsiva para iPhone e desktop.
