@@ -1,10 +1,13 @@
-# Segurança — PromoBridge V1
+# Segurança
 
-- Use um número de WhatsApp separado do número pessoal sempre que possível.
-- Não use o bot para spam, disparos em massa ou mensagens para pessoas que não esperam recebê-las.
-- Mantenha o repositório privado.
-- Não remova `data/` do `.gitignore`.
-- Não salve senhas, códigos SMS, tokens ou cookies no código.
-- O painel local escuta apenas em `127.0.0.1` por padrão, reduzindo exposição na rede.
-- O resolvedor de links bloqueia localhost e faixas privadas para reduzir risco de SSRF.
-- Comece em modo Manual e valide a afiliação de cada loja antes do modo Automático.
+Não envie senhas, códigos SMS/2FA, cookies, exportações da sessão ou tokens pelo chat. O painel pede somente identificadores públicos e links de calibração. A sessão vinculada do WhatsApp fica em armazenamento local ignorado pelo Git; os arquivos de sessão equivalem a acesso à conta e precisam de proteção no computador.
+
+O uso de Baileys é uma integração não oficial. Pode causar restrição ou bloqueio pelo WhatsApp; use um número separado e grupos que autorizaram o monitoramento. Limites de envio reduzem excesso, mas não eliminam esse risco.
+
+O worker é local e escuta somente em loopback. Não faça port forwarding nem o publique diretamente. O painel hospedado é uma demonstração isolada. A API valida Host/Origin e exige token CSRF em alterações.
+
+O resolvedor verifica destinos públicos em cada salto, fixa a resolução DNS no transporte e limita tempo, tamanho e redirecionamentos. Falha de DNS, produto não reconhecido, afiliação desconhecida ou link suspeito bloqueiam o envio.
+
+Backups do painel contêm configuração pública, ofertas e atividade; não incluem sessão WhatsApp. Ainda podem conter nomes de grupos e textos recebidos: guarde-os em local privado. Segredos, bancos, sessão e dados operacionais são ignorados pelo Git.
+
+Antes de uso contínuo, valide um envio real com um produto conhecido e confirme sua atribuição no programa de parceiros. A presença de uma tag não comprova titularidade, elegibilidade ou comissão paga.

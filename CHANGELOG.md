@@ -1,22 +1,13 @@
-# Changelog
+# Alterações
 
-## Estado do checkout
+## 2.0.0
 
-O histórico abaixo descreve o pacote original. O envio atual ao GitHub não inclui o código, o painel ou os testes; portanto, essas funcionalidades ainda não foram verificadas neste repositório. Consulte `README.md` para os arquivos que precisam ser recuperados.
+- Monorepo TypeScript strict com painel React, worker persistente e contratos compartilhados.
+- Painel em português com onboarding, simulação, fila, fontes, afiliação, audiência, automação, mensagens, saúde e backup.
+- Resolvedor HTTPS com proteção de destinos privados em cada salto e DNS fixado no transporte.
+- Validação independente de produto/afiliação; lojas sem mecanismo oficial implementado ficam bloqueadas.
+- Score explicável, feedback persistente, horários, limites e políticas de repetição.
+- SQLite versionado, reserva persistente de publicação e recuperação de envios incertos.
+- Dependências fixadas, lockfile e testes de segurança, integração e painel.
 
-## 1.0.0 — 2026-10-15
-
-- Conexão WhatsApp via Baileys com QR Code.
-- Painel local sem necessidade de editar código.
-- Múltiplos grupos de origem e um grupo de destino configuráveis.
-- Troca de número/sessão pelo painel.
-- Módulos separados: Amazon, Shopee, Mercado Livre, Magalu, AliExpress, SHEIN e Temu.
-- Resolver de links e canonicalização.
-- Conversão Amazon por tag.
-- Calibração original + afiliado para plataformas compatíveis com parâmetros reutilizáveis.
-- Bloqueio seguro quando a afiliação não puder ser garantida.
-- Reescrita de promoção sem IA paga.
-- Fila manual e modo automático.
-- SQLite, anti-repetição e limpeza automática.
-- Alertas administrativos via WhatsApp.
-- Estrutura pronta para GitHub e painel estático no Vercel.
+A V1 original foi auditada e permanece no handoff. Seu commit inicial foi preservado no histórico do repositório.

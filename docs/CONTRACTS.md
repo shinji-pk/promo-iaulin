@@ -1,0 +1,16 @@
+# Contratos de implementação
+
+Raiz: /workspace/promobridge. Node 24, TS strict, ESM, imports relativos terminando em .ts. Contratos em packages/shared/src/index.ts. Não editar contratos sem avisar o agente raiz. Um package.json/lockfile na raiz, administrado pelo agente raiz.
+
+## Core
+packages/core/src/index.ts exporta processPromotion(input:IngestInput, settings:Settings, context?:{history?:Offer[],feedback?:Feedback[],resolveUrl?:(url:string)=>Promise<string>}):Promise<Offer[]> (extrai múltiplos links). Também exporta evaluatePublication(offer:Offer,settings:Settings,history:Offer[],now?:Date):{allowed:boolean,reasons:string[]} e renderMessage(offer,settings):string. Resolver em packages/core/src/resolver.ts exporta resolveUrl. affiliate-adapters/src/index.ts exporta getIntegrationStatuses(settings):IntegrationStatus[], calibrateAffiliate(platform, config):Promise<{valid:boolean,reason:string}>, build/validate/identify helpers à sua escolha. Scoring independente.
+
+## Banco e API
+packages/db/src/index.ts exporta Database (constructor opcional path, default data/promobridge.sqlite) com getSettings/saveSettings, listOffers, getOffer, saveOffer, listFeedback/saveFeedback, listActivity/addActivity, stats/backup/restore/cleanup/close como necessário.
+apps/worker/src/api.ts exporta createApp(options?) para testes. API /api/v1/state -> AppSnapshot, PUT /settings -> Settings completo validado, POST /simulate {text} -> Offer[], POST /offers/:id/action {action:'approve'|'reject'|'publish'|'edit',text?,reason?}. POST /affiliates/:platform/calibrate {originalUrl,affiliateUrl,publicId,enabled} -> resultado. WhatsApp POST /whatsapp/connect /whatsapp/reset, GET /whatsapp/groups. GET /backup, POST /restore {backup}, POST /cleanup {confirm:true}. GET /health. /api/v1/session retorna CSRF token; mutations exigem X-CSRF-Token e Origin local. UI chama sessão automaticamente. Não usar CORS permissivo.
+
+## WhatsApp
+apps/worker/src/whatsapp.ts exporta WhatsAppService({authDir,onMessage:(input:IngestInput)=>Promise<void>,getSettings:()=>Settings,onEvent?:(event:string,message:string)=>void}). Métodos getStatus():WhatsAppStatus, connect():Promise<void>, reset():Promise<void>, refreshGroups():Promise<WhatsAppGroup[]>, sendText(groupId,text):Promise<string> (retorna ID mensagem), stop():Promise<void>. Só connect explícito pelo painel, sem conexão por padrão. Dependências Baileys/pino/qrcode já no package root. Ignora fromMe, grupos não autorizados, destino, mensagens históricas. Reconexão bounded/backoff, sessão não versionada.
+
+## UI
+React + Vite (config apps/web/vite.config.ts, entry apps/web/index.html). API same origin /api/v1 via proxy 127.0.0.1:3030 dev; build em apps/web/dist servido pelo worker. Para Vercel, build estático com demonstração isolada no navegador e banner explícito (nenhum acesso ao PC). UI nunca rotula fixture como produção. Pode implementar demo-store no navegador se API inexistente, somente quando deployment não localhost; sinalizar sempre. Sem dados fake em API local; ação 'Carregar exemplos' chama /simulate por fixtures reais de texto. Implementar dashboard, fila/preview/edição, lojas/calibração, fontes/QR, audiência, automação, mensagens, saúde, backup/restore e onboarding.

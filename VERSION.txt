@@ -1,3 +1,2 @@
-PromoBridge V1.0.0
-Data: 2026-10-15
-Estado do checkout: incompleto; somente documentação e metadados. Código, painel, scripts e testes ausentes. Operação local e publicação não verificáveis até recuperar o pacote original.
+PromoBridge 2.0.0
+Worker local persistente + painel web demonstrativo no Vercel.

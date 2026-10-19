@@ -1,92 +1,80 @@
-# promo-iaulin — PromoBridge V1
+# PromoBridge
 
-> **Estado do repositório:** este checkout contém somente documentação e `package.json`. As pastas `src/`, `panel/`, `config/`, `scripts/` e `tests/` não foram enviadas ao GitHub. Por isso, `npm start`, `npm run check` e `npm test` falham por arquivos ausentes. É necessário recuperar o pacote original completo antes de instalar, iniciar ou publicar o painel. As funcionalidades abaixo descrevem o projeto esperado; não estão verificadas neste repositório incompleto.
+Seu espaço de curadoria de promoções: captar, entender, selecionar, revisar e compartilhar ofertas com afiliação validada.
 
-Bot local para **captar mensagens de promoção em grupos do WhatsApp**, identificar links de lojas suportadas, remover rastreamento/afiliação anterior, aplicar a sua configuração de afiliado, reescrever a mensagem e encaminhar a oferta para o grupo de destino.
+O painel está em português e reúne fila, simulação, lojas, público, fontes, regras, identidade das mensagens, atividade e backup. As configurações do uso diário ficam na interface.
 
-> **Importante:** a conexão com WhatsApp nesta V1 usa Baileys (integração não oficial via WhatsApp Web). Não é a API oficial da Meta. Existe risco de restrição da conta; use preferencialmente um número separado, sem spam e apenas nos grupos necessários.
+## Começar no Windows
 
-## Funcionalidades descritas para a V1 completa
+1. Instale o **Node.js 24 LTS** em [nodejs.org](https://nodejs.org).
+2. Baixe o repositório e extraia a pasta no computador.
+3. Abra `scripts/01-INSTALAR.bat`. Aguarde a instalação terminar.
+4. Abra `scripts/02-ABRIR-PAINEL.bat`. Mantenha a janela do aplicativo aberta enquanto estiver usando.
+5. Siga o guia do painel em **http://localhost:3030**. Comece em modo manual e use **Simular oferta** para conhecer o fluxo.
 
-- Conecta por QR Code como dispositivo vinculado.
-- Lista seus grupos automaticamente.
-- Permite escolher **vários grupos de origem** pelo painel.
-- Permite trocar o **grupo de destino** sem editar código.
-- Permite desconectar e vincular **outro número** sem editar código.
-- Detecta links de Amazon, Shopee, Mercado Livre, Magalu, AliExpress, SHEIN e Temu.
-- Resolve links encurtados/redirecionados quando possível.
-- Canonicaliza o produto e remove parâmetros comuns de rastreamento.
-- Gera link afiliado quando a plataforma está corretamente configurada/calibrada.
-- **Nunca publica no chute:** se a afiliação não for confiável, segura a oferta na fila.
-- Reescreve promoção sem IA paga, em estilos Chamativo, Compacto ou Limpo.
-- Fila de aprovação manual ou modo automático.
-- SQLite local para histórico e anti-repetição.
-- Limpeza automática do banco.
-- Alertas de erro para seu número, se configurado.
-- Painel em `http://localhost:3030`.
+Depois da instalação inicial, basta abrir `02-ABRIR-PAINEL.bat`. Não é necessário editar código, JSON, banco ou arquivos de configuração. O computador precisa ficar ligado para receber e publicar ofertas. Não execute duas cópias do aplicativo para a mesma sessão.
 
-## Como instalar no Windows
+## Configurar pelo painel
 
-1. Recupere os arquivos ausentes do pacote original completo. Os atalhos dos próximos passos ainda não existem neste checkout.
-2. Instale **Node.js 22 ou superior**.
-3. Extraia esta pasta.
-4. Dê dois cliques em `scripts/01-INSTALAR.bat`.
-5. Depois dê dois cliques em `scripts/02-INICIAR-BOT.bat`.
-6. O painel abrirá no navegador.
-7. Escaneie o QR Code do WhatsApp.
-8. Escolha grupos, configure afiliados e salve.
-9. Comece em **Modo Manual** até validar todos os links.
+- **Fontes:** conecte o WhatsApp pelo QR Code, selecione os grupos-fonte e um destino pela lista de nomes. Use um número separado e grupos que autorizaram o monitoramento.
+- **Lojas & afiliados:** informe sua identificação pública e um par de links do mesmo produto. Nunca informe senha, SMS, 2FA ou cookies.
+- **Audiência:** ajuste categorias e palavras bloqueadas. Categorias com peso zero ficam desativadas.
+- **Automação:** escolha modo, score mínimo, frequência, horário silencioso, fuso e repetição. Uma pausa bloqueia os envios sem apagar a sessão.
+- **Mensagens:** escolha estilo, convite e assinatura. Confira a prévia de cada oferta.
+- **Configurações:** baixe/restaure backup e ajuste retenção.
 
-## Dados privados
+As configurações e a sessão persistem entre reinicializações. Ao abrir novamente o aplicativo, uma sessão salva é retomada automaticamente. Se ela tiver expirado, use **Conectar WhatsApp** no painel para obter um novo QR. A reconexão após quedas transitórias é automática e tem limite de tentativas.
 
-A sessão do WhatsApp, banco SQLite e configurações reais são criados dentro de `data/`. Essa pasta está protegida pelo `.gitignore`, então **não deve ser enviada ao GitHub**.
+## O que esta versão faz
 
-Nunca coloque no repositório:
+- Extrai múltiplos links, preços brasileiros, cupom e frete explicitamente informados; separa ofertas quando a associação entre texto e link é clara.
+- Resolve URLs HTTPS com validação DNS/IP e de cada redirecionamento, timeout e limites de cabeçalho; não baixa o corpo das páginas.
+- Reconhece produtos de sete marketplaces em adaptadores separados.
+- Reescreve mensagens sem IA paga, mostra score e confiança explicáveis e usa feedback real de forma conservadora.
+- Persiste fila, atividade e feedback em SQLite; impede reenvio concorrente, revalida regras antes da publicação e retém envios de confirmação incerta para conferência.
+- Executa simulações sem envio ao WhatsApp. Elas ficam identificadas e não contam como publicação real.
 
-- senha;
-- código SMS;
-- QR Code/sessão do WhatsApp;
-- cookies de login;
-- token secreto;
-- chaves privadas de APIs.
+## Limites que precisam ficar claros
 
-## Afiliados
+**Amazon:** implementada validação estrutural de ASIN, marketplace e tag pública mediante calibração. Ela verifica a forma do link e a continuidade do produto; não comprova titularidade da conta, aprovação pelo programa nem comissão paga. Valide um envio real e confira a atribuição no programa antes de ativar a automação.
 
-### Amazon
+**Shopee, Mercado Livre, Magalu, AliExpress, SHEIN e Temu:** identificação de produto implementada; geração oficial e prova de atribuição ainda dependem de integrações específicas. A publicação dessas lojas fica bloqueada. O sistema não inventa regras de comissão a partir de parâmetros de URL.
 
-Informe sua **tag de afiliado** no painel. O módulo gera a URL canônica do produto com a sua tag.
+**WhatsApp:** conexão por Baileys, não oficial, com risco de restrição/bloqueio. Os testes usam mensagens e transporte controlados; o vínculo com seu número e o envio real precisam ser validados na sua máquina. Mensagens antigas, próprias e do destino são ignoradas. A versão envia texto; captura/reenvio de mídia e previews de produto são evoluções futuras.
 
-### Shopee, Mercado Livre, Magalu, AliExpress, SHEIN e Temu
+**Curadoria:** score determinístico e ajuste limitado por feedback, sem classificador treinado. Preço, cupom e frete vêm da mensagem recebida; não há consulta oficial de estoque, reputação, histórico de mercado ou confirmação de cupom.
 
-A V1 possui uma etapa de **calibração**: informe um link original e um link afiliado seu do **mesmo produto**. O bot resolve os dois, confirma se apontam para o mesmo item e tenta identificar apenas parâmetros de afiliação reutilizáveis.
+## Painel no Vercel
 
-Se uma plataforma usar link opaco, assinatura temporária, cookie ou API privada, a V1 marca a loja como **integração específica necessária** e não publica aquela oferta. Isso é proposital para não trocar um link válido por um link que não gera comissão.
+O build publicado é uma **demonstração isolada no navegador**, identificada na tela. Você pode experimentar a simulação e as preferências. Ela não controla seu PC nem conecta o WhatsApp; dados de demonstração ficam nesse navegador.
 
-## GitHub
+O worker local escuta somente em `127.0.0.1`. Controle remoto real ainda exige um backend persistente com autenticação e canal seguro. Não exponha a API local à internet e não tente manter a sessão do WhatsApp em Vercel Functions.
 
-Recomendação:
+## Desenvolvimento
 
-- Repositório existente: `shinji-pk/promo-iaulin` (nome do produto: PromoBridge).
-- Visibilidade: **Private**
-- Descrição: `Bot local para identificar promoções, converter links de afiliados e publicar ofertas automaticamente no WhatsApp.`
+Requer Node 24 e npm. Dependências com versões fixadas e lockfile.
 
-Suba o projeto inteiro, **exceto o que já estiver bloqueado pelo `.gitignore`**.
+```bash
+npm ci
+npm run check
+npm run dev
+```
 
-## Vercel
+Interface de desenvolvimento em `http://localhost:5173`; API em `http://localhost:3030`. Para executar o build final:
 
-O GitHub informa a URL `https://promo-iaulin-mkce.vercel.app`. Sua disponibilidade e o vínculo com o commit atual ainda não foram verificados; as requisições externas foram bloqueadas pela política de rede deste ambiente.
+```bash
+npm run build
+npm start
+```
 
-Após recuperar a pasta `panel/`, o projeto pode ter o **painel estático** publicado no Vercel escolhendo essa pasta como Root Directory. No checkout atual não existe uma página para publicar. O **motor do WhatsApp não deve rodar em Vercel Functions**, pois ele precisa manter uma conexão WebSocket contínua. O painel hospedado serve como interface/preview; para operar a V1, use o painel local aberto pelo próprio bot.
+`npm run test:e2e` verifica o painel no Chromium; veja a configuração do Playwright. As suítes de unidade e integração não precisam de uma conta real de WhatsApp ou afiliados.
 
-Para operação 24h sem deixar seu computador ligado, a evolução correta é mover o motor para um VPS/servidor persistente — não para uma função serverless comum.
+## Documentação
 
-## Estrutura pensada para atualizações por pasta
+- [Arquitetura e limitações](docs/ARQUITETURA.md)
+- [Auditoria da V1](docs/AUDIT.md)
+- [Segurança](SECURITY.md)
+- [Privacidade](PRIVACY.md)
+- [Status de validação](docs/VALIDACAO.md)
 
-- `src/affiliate/` — módulos/conversão de lojas.
-- `src/` — motor do bot.
-- `panel/` — painel visual.
-- `config/` — configuração padrão.
-- `scripts/` — instaladores/atalhos Windows.
-- `data/` — dados locais privados (não sobe para Git).
-
-Nas próximas versões, alterações serão entregues como **pastas/arquivos prontos para substituir**, sem exigir que você programe manualmente.
+Sessão, bancos, logs e backups locais ficam fora do Git. Guarde backups em local privado; eles podem conter nomes de grupos e textos de ofertas.
