@@ -5,7 +5,7 @@ O Iaulin Bot mantém a interface React/Vite, o processo persistente do WhatsApp 
 | Camada | Função e persistência |
 | --- | --- |
 | `apps/web` | Painel legível em português, guia flutuante, login e configuração contextual |
-| `apps/cloud` + `api/index.ts` | Better Auth, sessões, isolamento por usuário, preferências e última sincronização em Vercel Blob privado |
+| `apps/cloud` + `api/index.js` | Better Auth, sessões, isolamento por usuário, preferências e última sincronização em Vercel Blob privado |
 | `apps/worker` | Processo local Node 24, WhatsApp, grupos, fila, agendamento, mídia limitada e APIs oficiais |
 | `packages/db` | SQLite local, migrations, histórico, reservas persistentes e recuperação de envios incertos |
 | `packages/core` | Parsing, orçamento total de 20 segundos, score, revisão, deduplicação e regras de publicação |
@@ -13,7 +13,7 @@ O Iaulin Bot mantém a interface React/Vite, o processo persistente do WhatsApp 
 
 ## Conta e dados
 
-Better Auth gerencia senhas e cookies, cadastro, login, logout e troca de senha. O servidor identifica o usuário pela sessão; IDs enviados pelo cliente não selecionam outro espaço. Os documentos privados usam ETag e gravação condicional para evitar perda de alterações entre instâncias. O adapter autentica e modifica todas as tabelas da autenticação em um documento transacional, com unicidade, referências e rollback. As senhas são hashes produzidos pela biblioteca.
+Better Auth gerencia senhas e cookies, cadastro, login, logout e troca de senha. O backend é compilado para JavaScript antes do empacotamento da Function. Leituras privadas usam representação sem compressão, preservando o ETag forte para alterações condicionais. O servidor identifica o usuário pela sessão; IDs enviados pelo cliente não selecionam outro espaço. Os documentos privados usam ETag e gravação condicional para evitar perda de alterações entre instâncias. O adapter autentica e modifica todas as tabelas da autenticação em um documento transacional, com unicidade, referências e rollback. As senhas são hashes produzidos pela biblioteca.
 
 Essa implementação atende uma instalação de pequeno volume: o documento global de autenticação tem limite de 8 MiB e cada espaço também tem limite de 8 MiB. A cópia online mantém até 3.000 ofertas e 300 atividades; o painel mostra até 1.000 ofertas. O worker conserva o histórico completo conforme a retenção. Para crescimento significativo, migrar autenticação e consultas para Postgres, preservando IDs e contratos. Não há recuperação/verificação por e-mail sem um provedor configurado.
 

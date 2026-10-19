@@ -1,5 +1,14 @@
 import {test,expect} from '@playwright/test';
 
+test('o acesso de dispositivo usa pareamento sem abrir cadastro de conta na nuvem',async({page})=>{
+  await page.route('**/api/v1/account',route=>route.fulfill({status:401,contentType:'application/json',body:JSON.stringify({code:'PAIRING_REQUIRED'})}));
+  await page.goto('/');
+  await expect(page.getByRole('heading',{name:'Um novo dia, boas escolhas.'})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Entrar na minha conta'})).toHaveCount(0);
+  await page.unroute('**/api/v1/account');await page.reload();
+  await expect(page.getByRole('heading',{name:'Um novo dia, boas escolhas.'})).toBeVisible();
+});
+
 test('cria conta, salva no servidor, sai, entra e abre o guia flutuante',async({page},testInfo)=>{
   const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
   const email=`browser-${testInfo.project.name}@example.com`,password='Minha frase de acesso 123!';

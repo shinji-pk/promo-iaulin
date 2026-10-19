@@ -5,9 +5,9 @@ Verificações em 19/10/2026, com Node 24.19.0 e Chromium no Linux. Contas reais
 | Verificação | Resultado |
 | --- | --- |
 | ESLint e TypeScript strict | Passaram |
-| Vitest: core, URLs, banco, APIs, providers, cofre, WhatsApp, contas e proxy | 429 testes passaram |
-| Playwright desktop e iPhone 13 | 10 testes passaram |
-| Build Vite e JavaScript compilado do worker | Passaram |
+| Vitest: core, URLs, banco, APIs, providers, cofre, WhatsApp, contas e proxy | 430 testes passaram |
+| Playwright desktop e iPhone 13 | 12 testes passaram |
+| Build Vite e JavaScript compilado do worker e da API de contas | Passaram |
 | npm audit completo e de produção | Zero vulnerabilidades reportadas |
 
 ## Fluxos exercitados
@@ -47,3 +47,5 @@ Playwright precisa do Chromium instalado no ambiente de desenvolvimento. A opera
 ## Histórico do checkup de instalação
 
 As revisões remotas 1c15d6c e 246f05b corrigiram o checkout incompleto, entradas extrínsecas do lockfile que causavam EBADPLATFORM no Linux e o proxy herdado pelo preview estático. Essas correções foram integradas antes da versão 2.1. A presente versão mantém o preview sem proxy e usa dependências e o mesmo commit libsignal por tarball HTTPS, evitando exigir Git/SSH no iniciador portátil.
+
+A verificação pública detectou e corrigiu o carregamento de dependências TypeScript na Function e o ETag fraco produzido pela compressão Brotli de documentos. O backend agora entrega JavaScript compilado e solicita Accept-Encoding identity nas leituras privadas. Há regressão de CAS para documentos maiores que o limiar de compressão.

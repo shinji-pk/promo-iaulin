@@ -32,16 +32,22 @@ export function AccountGate({children}:{children:ReactNode}){
     try{
       const response=await fetch('/api/v1/account',{credentials:'same-origin',signal:AbortSignal.timeout(30000)});
       if(version!==loadVersion.current)return;
+      if(response.status===401){
+        const body=await response.json();
+        // A device tunnel uses its single-use pairing flow, rather than cloud accounts.
+        if(body.code==='PAIRING_REQUIRED'){setAccount(null);return;}
+      }
       if(response.status===404&&local){setAccount(null);return;}
       if(!response.ok)throw new Error('O serviço de contas está indisponível. Tente novamente em instantes.');
-      const data=await response.json() as Account;
+      const data=await response.json();
       if(version!==loadVersion.current)return;
+      if(data.mode==='worker'){setAccount(null);return;}
       if(data.mode!=='cloud')throw new Error('Não foi possível identificar o serviço de contas.');
       setAccount(data);
     }catch(cause){if(version===loadVersion.current)setError(cause instanceof Error?cause.message:'Não foi possível acessar sua conta.');}
   },[]);
   useEffect(()=>{void load();},[load]);
-  useEffect(()=>{const expired=()=>{setAccount(previous=>previous?{...previous,user:null}:previous);setError('Sua sessão terminou. Entre novamente para continuar.');setPanel(false);};window.addEventListener('promobridge:session-expired',expired);return()=>window.removeEventListener('promobridge:session-expired',expired);},[]);
+  useEffect(()=>{const expired=()=>{setAccount(previous=>previous?{...previous,user:null}:previous);setError('Sua sessão terminou. Entre novamente para continuar.');setPanel(false);setScreen('login');};window.addEventListener('promobridge:session-expired',expired);return()=>window.removeEventListener('promobridge:session-expired',expired);},[]);
   async function authenticate(event:FormEvent<HTMLFormElement>){
     event.preventDefault();if(busy)return;setBusy(true);setError('');
     const form=new FormData(event.currentTarget);
@@ -50,7 +56,7 @@ export function AccountGate({children}:{children:ReactNode}){
       await load();
     }catch(cause){setError(cause instanceof Error?cause.message:'Não foi possível entrar.');}finally{setBusy(false);}
   }
-  async function logout(){setBusy(true);try{await jsonRequest('/api/auth/sign-out',{});setAccount(previous=>previous?{...previous,user:null}:previous);setPanel(false);}catch(cause){setError(cause instanceof Error?cause.message:'Não foi possível sair.');}finally{setBusy(false);}}
+  async function logout(){setBusy(true);try{await jsonRequest('/api/auth/sign-out',{});setAccount(previous=>previous?{...previous,user:null}:previous);setPanel(false);setScreen('login');}catch(cause){setError(cause instanceof Error?cause.message:'Não foi possível sair.');}finally{setBusy(false);}}
   if(account===null)return children;
   if(account===undefined&&!error)return <Loading/>;
   if(!account?.user)return <div className="account-screen"><div className="account-welcome"><a className="account-brand" href="/"><span className="brand-mark">p<span>↗</span></span><b>Promo · Iaulin Bot</b></a><span className="eyebrow">SEU GRUPO DE OFERTAS, COM MAIS LEVEZA</span><h1>Boas ofertas.<br/>Tudo no seu lugar.</h1><p>Organize seus links de afiliado, selecione as melhores ofertas e cuide do seu grupo de vendas no WhatsApp.</p><div className="account-promise"><ShieldCheck size={22}/><span>Suas preferências ficam salvas na sua conta, separadas das outras pessoas.</span></div></div><div className="account-login"><div className="account-tabs" role="tablist" aria-label="Acessar sua conta"><button role="tab" aria-selected={screen==='login'} onClick={()=>{setScreen('login');setError('');}}>Entrar</button><button role="tab" aria-selected={screen==='signup'} onClick={()=>{setScreen('signup');setError('');}}>Criar conta</button></div><h2>{screen==='login'?'Que bom ter você por aqui.':'Vamos preparar seu espaço.'}</h2><p>{screen==='login'?'Entre para continuar de onde parou.':'Crie sua conta para guardar suas escolhas.'}</p><form onSubmit={event=>void authenticate(event)}>{screen==='signup'&&<Field label="Seu nome"><input name="name" autoComplete="name" minLength={2} maxLength={100} required/></Field>}<Field label="E-mail"><input name="email" type="email" autoComplete="email" maxLength={254} required/></Field><Field label="Senha" hint={screen==='signup'?'Use pelo menos 12 caracteres. Uma frase é fácil de lembrar.':undefined}><input name="password" type="password" autoComplete={screen==='signup'?'new-password':'current-password'} minLength={screen==='signup'?12:1} maxLength={128} required/></Field>{error&&<div className="notice notice-warning" role="alert"><p>{error}</p></div>}<Button type="submit" disabled={busy} icon={ArrowRight}>{busy?'Aguarde…':screen==='signup'?'Criar minha conta':'Entrar na minha conta'}</Button></form><p className="account-save-note">O WhatsApp funciona com o aplicativo aberto no computador. O guia mostra como conectar tudo.</p>{error&&<Button variant="ghost" icon={RefreshCw} onClick={()=>void load()}>Verificar conexão</Button>}</div></div>;

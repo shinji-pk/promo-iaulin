@@ -17,7 +17,7 @@ async function request<T>(path: string, method = 'GET', body?: unknown): Promise
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json', ...(csrf ? { 'X-CSRF-Token': csrf } : {}) },
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-      signal: AbortSignal.timeout(30000),
+      signal: AbortSignal.timeout(path === '/remote/start' ? 90000 : 30000),
     });
   } catch { throw new Error('Não conseguimos acessar o aplicativo local. Confira se o PromoBridge está aberto no computador e tente novamente.'); }
   let data: any;

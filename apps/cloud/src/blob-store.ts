@@ -61,9 +61,11 @@ class VercelBlobBackend implements JsonBackend {
 
   async read(pathname: string): Promise<{ etag: string; value: unknown } | null> {
     // Cached reads can resurrect a revoked session or allow an out-of-date uniqueness check.
-    const response = await get(pathname, { access: 'private', useCache: false });
+    // Compression turns the content ETag into a weak representation ETag. It
+    // cannot authorize an ifMatch write, so read the identity representation.
+    const response = await get(pathname, { access: 'private', useCache: false, headers: { 'accept-encoding': 'identity' } });
     if (!response) return null;
-    if (response.statusCode !== 200 || !response.stream || !response.blob.etag) throw new Error('Resposta inválida do armazenamento privado.');
+    if (response.statusCode !== 200 || !response.stream || !response.blob.etag || response.blob.etag.startsWith('W/')) throw new Error('Resposta inválida do armazenamento privado.');
     if (response.blob.size !== null && response.blob.size > this.maxBytes) throw new Error('Documento excede o limite de armazenamento.');
     const reader = response.stream.getReader();
     const chunks: Uint8Array[] = [];

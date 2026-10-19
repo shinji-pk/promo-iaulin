@@ -408,6 +408,7 @@ export function createApp(options:AppOptions={}):Express & {runtime:WorkerRuntim
     return status.pairing ? {...status,qrDataUrl:await QRCode.toDataURL(status.pairing.url,{width:300,margin:2,errorCorrectionLevel:'M'})} : status;
   };
   router.get('/setup',(_request,response)=>response.json(runtime.setup()));
+  router.get('/account',(_request,response)=>response.json({mode:'worker',persistence:'computer'}));
   router.get('/affiliates/guides',(_request,response)=>response.json(getIntegrationGuides()));
   router.get('/affiliates/credentials',(_request,response)=>response.json(runtime.affiliates.credentialStatuses()));
   router.post('/affiliates/:platform/credentials',localOnly,async(request,response)=>{

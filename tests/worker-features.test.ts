@@ -123,9 +123,11 @@ describe('worker product operations and safe remote API',()=>{
     const rewritten=await new Promise<number|undefined>((resolveStatus,reject)=>{const outgoing=httpRequest(`${base}/api/v1/session`,{headers:{Host:'localhost','CF-Connecting-IP':'203.0.113.7'}},response=>{response.resume();resolveStatus(response.statusCode);});outgoing.on('error',reject);outgoing.end();});expect(rewritten).toBe(403);
     const forwarded=await new Promise<number|undefined>((resolveStatus,reject)=>{const outgoing=httpRequest(`${base}/api/v1/session`,{headers:{Host:'localhost','X-Forwarded-Host':'worker.trycloudflare.com'}},response=>{response.resume();resolveStatus(response.statusCode);});outgoing.on('error',reject);outgoing.end();});expect(forwarded).toBe(403);
     expect((await remoteRequest('/session')).status).toBe(401);expect((await remoteRequest('/state')).body.code).toBe('PAIRING_REQUIRED');
+    expect((await remoteRequest('/account')).body.code).toBe('PAIRING_REQUIRED');
     expect((await remoteRequest('/remote/pair','POST',{code:'PAIR-CODE'},{Origin:'https://attacker.example'})).status).toBe(403);
     const pair=await remoteRequest('/remote/pair','POST',{code:'PAIR-CODE'});expect(pair.status).toBe(200);expect(pair.body.csrfToken).toBe(token);expect(pair.headers['set-cookie']?.[0]).toMatch(/HttpOnly/);expect(pair.headers['set-cookie']?.[0]).toMatch(/Secure/);expect(pair.headers['set-cookie']?.[0]).toMatch(/SameSite=Strict/);
     const headers={Cookie:'promobridge_remote=DEVICE','X-CSRF-Token':token};expect((await remoteRequest('/state','GET',undefined,headers)).status).toBe(200);
+    expect((await remoteRequest('/account','GET',undefined,headers)).body).toEqual({mode:'worker',persistence:'computer'});
     const remoteStatus=await remoteRequest('/remote','GET',undefined,headers);expect(remoteStatus.body.pairing).toBeUndefined();expect(remoteStatus.body.qrDataUrl).toBeUndefined();expect((await request<any>('/remote')).body.qrDataUrl).toMatch(/^data:image\/png;base64,/);
     expect((await remoteRequest('/remote/stop','POST',{},headers)).status).toBe(403);expect((await remoteRequest('/affiliates/shopee/credentials','POST',{values:{}},headers)).status).toBe(403);expect(remote.stop).not.toHaveBeenCalled();
   });
