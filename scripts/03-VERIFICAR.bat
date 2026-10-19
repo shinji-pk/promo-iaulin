@@ -1,4 +1,6 @@
 @echo off
-cd /d "%~dp0.."
-call npm run check
+chcp 65001 >nul
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0iniciar-windows.ps1" -Mode check
+set "PROMOBRIDGE_EXIT=%errorlevel%"
 pause
+exit /b %PROMOBRIDGE_EXIT%

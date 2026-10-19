@@ -11,6 +11,9 @@ const safeUrl = z.string().max(4096).refine(value => {
   if (!value) return true;
   try { const url = new URL(value); return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password; } catch { return false; }
 }, 'URL inválida');
+const localMediaUrl = z.string().regex(/^\/api\/v1\/media\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+const recordNamespace = z.string().min(1).max(100).regex(/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/);
+const recordId = z.string().min(1).max(500);
 export const offerSchema = z.object({
   id:z.string().min(1).max(200), createdAt:timestamp, updatedAt:timestamp,
   sourceId:z.string().max(100), sourceName:z.string().max(100), sourceMessageId:z.string().max(200),
@@ -23,8 +26,21 @@ export const offerSchema = z.object({
   affiliateValid:z.boolean(), reasons:z.array(z.string().max(2000)).max(100),
   stages:z.array(z.object({name:z.string().max(200),status:z.enum(['ok','blocked','pending']),detail:z.string().max(2000)}).strict()).max(100),
   rewrittenText:boundedText, status:z.enum(['review','approved','rejected','duplicate','blocked','publishing','published','simulated','failed','uncertain']),
-  publishedAt:timestamp.nullable(), imageUrl:safeUrl.nullable().optional()
+  publishedAt:timestamp.nullable(), imageUrl:z.union([safeUrl,localMediaUrl]).nullable().optional(),
+  affiliateReceiptId:z.string().min(1).max(200).nullable().optional(),
+  affiliateMethod:z.enum(['amazon-tag','official-api','owner-reviewed']).nullable().optional(),
+  requiresManualApproval:z.boolean().optional(), manuallyApprovedAt:timestamp.nullable().optional(),
+  scheduledAt:timestamp.nullable().optional(), expiresAt:timestamp.nullable().optional(),
+  providerMessageId:z.string().min(1).max(200).nullable().optional(), mediaId:z.uuid().nullable().optional()
 }).strict();
+const offerSearchSchema = z.object({
+  page:z.number().int().min(1).max(1_000_000).default(1),
+  pageSize:z.number().int().min(1).max(100).default(50),
+  query:z.string().trim().max(200).default(''),
+  status:offerSchema.shape.status.optional(), platform:z.enum(platformIds).optional(), simulation:z.boolean().optional()
+}).strict();
+export type OfferSearch = z.input<typeof offerSearchSchema>;
+export interface OfferSearchResult {items:Offer[];total:number;page:number;pageSize:number;}
 const feedbackSchema = z.object({id:z.string().min(1).max(200),offerId:z.string().min(1).max(200),action:z.enum(['approve','reject','edit']),category:z.enum(categoryIds),reason:z.string().max(2000),createdAt:timestamp}).strict();
 const activitySchema = z.object({id:z.string().min(1).max(200),createdAt:timestamp,level:z.enum(['info','warning','error']),event:z.string().max(200),message:z.string().max(3000),offerId:z.string().max(200).optional()}).strict();
 const strictSettings = settingsSchema.strict().extend({
@@ -50,7 +66,7 @@ export class Database {
     this.connection = new DatabaseSync(path);
     this.connection.exec('PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;');
     const version = Number((this.connection.prepare('PRAGMA user_version').get() as {user_version:number}).user_version);
-    if (version > 1) { this.connection.close(); throw new Error('Banco criado por uma versão mais recente.'); }
+    if (version > 2) { this.connection.close(); throw new Error('Banco criado por uma versão mais recente.'); }
     if (version === 0) this.connection.exec(`BEGIN IMMEDIATE;
       CREATE TABLE settings (id INTEGER PRIMARY KEY CHECK(id=1), body TEXT NOT NULL);
       CREATE TABLE offers (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, product_key TEXT NOT NULL, source_message_id TEXT NOT NULL, simulation INTEGER NOT NULL, status TEXT NOT NULL, published_at TEXT, body TEXT NOT NULL);
@@ -64,6 +80,12 @@ export class Database {
       CREATE TABLE activity (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, body TEXT NOT NULL);
       CREATE INDEX activity_created ON activity(created_at DESC);
       PRAGMA user_version=1; COMMIT;`);
+    if (version < 2) this.connection.exec(`BEGIN IMMEDIATE;
+      CREATE TABLE records (namespace TEXT NOT NULL, id TEXT NOT NULL, body TEXT NOT NULL, PRIMARY KEY(namespace,id)) WITHOUT ROWID;
+      CREATE INDEX offers_history ON offers(created_at DESC,id DESC);
+      CREATE INDEX offers_platform ON offers(json_extract(body,'$.platform'),created_at DESC,id DESC);
+      CREATE INDEX offers_simulation ON offers(simulation,created_at DESC,id DESC);
+      PRAGMA user_version=2; COMMIT;`);
     if (!this.connection.prepare('SELECT id FROM settings WHERE id=1').get()) this.saveSettings(defaultSettings());
     // A crash after the provider accepted a message cannot safely be retried.
     this.transaction(() => {
@@ -87,9 +109,46 @@ export class Database {
     this.connection.prepare('INSERT INTO settings(id,body) VALUES(1,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body').run(JSON.stringify(value));
     return value;
   }
+  /** Non-secret runtime records. Credentials and signing keys belong in the separate vault. */
+  putRecord(namespace:string,id:string,value:unknown):void {
+    const scope=recordNamespace.parse(namespace), key=recordId.parse(id);
+    const body=JSON.stringify(value);
+    if (body===undefined || Buffer.byteLength(body,'utf8')>1_048_576) throw new Error('Registro JSON inválido ou maior que 1 MB.');
+    this.connection.prepare('INSERT INTO records(namespace,id,body) VALUES(?,?,?) ON CONFLICT(namespace,id) DO UPDATE SET body=excluded.body').run(scope,key,body);
+  }
+  getRecord<T>(namespace:string,id:string):T|undefined {
+    const row=this.connection.prepare('SELECT body FROM records WHERE namespace=? AND id=?').get(recordNamespace.parse(namespace),recordId.parse(id));
+    return row ? JSON.parse(String(row.body)) as T : undefined;
+  }
+  listRecords<T>(namespace:string):T[] {
+    return this.connection.prepare('SELECT body FROM records WHERE namespace=? ORDER BY id').all(recordNamespace.parse(namespace)).map(row=>JSON.parse(String(row.body)) as T);
+  }
+  deleteRecord(namespace:string,id:string):void {
+    this.connection.prepare('DELETE FROM records WHERE namespace=? AND id=?').run(recordNamespace.parse(namespace),recordId.parse(id));
+  }
+  clearRecords(namespace:string):void {
+    this.connection.prepare('DELETE FROM records WHERE namespace=?').run(recordNamespace.parse(namespace));
+  }
   listOffers(limit?: number): Offer[] {
     const rows = limit === undefined ? this.connection.prepare('SELECT body FROM offers ORDER BY created_at DESC, id DESC').all() : this.connection.prepare('SELECT body FROM offers ORDER BY created_at DESC, id DESC LIMIT ?').all(limit);
     return rows.map(row => offerSchema.parse(JSON.parse(String(row.body))));
+  }
+  searchOffers(input:OfferSearch={}):OfferSearchResult {
+    const search=offerSearchSchema.parse(input);
+    const clauses:string[]=[], parameters:(string|number)[]=[];
+    if (search.status!==undefined) {clauses.push('status=?');parameters.push(search.status);}
+    if (search.platform!==undefined) {clauses.push("json_extract(body,'$.platform')=?");parameters.push(search.platform);}
+    if (search.simulation!==undefined) {clauses.push('simulation=?');parameters.push(Number(search.simulation));}
+    if (search.query) {
+      clauses.push("(COALESCE(json_extract(body,'$.title'),'') || ' ' || COALESCE(json_extract(body,'$.originalText'),'') || ' ' || COALESCE(json_extract(body,'$.sourceName'),'') || ' ' || COALESCE(json_extract(body,'$.coupon'),'') || ' ' || COALESCE(json_extract(body,'$.productId'),'') || ' ' || COALESCE(json_extract(body,'$.platform'),'')) LIKE ? ESCAPE '\\'");
+      parameters.push(`%${search.query.replace(/[\\%_]/g,'\\$&')}%`);
+    }
+    const where=clauses.length ? ` WHERE ${clauses.join(' AND ')}` : '';
+    return {
+      items:this.connection.prepare(`SELECT body FROM offers${where} ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?`).all(...parameters,search.pageSize,(search.page-1)*search.pageSize).map(row=>offerSchema.parse(JSON.parse(String(row.body)))),
+      total:Number(this.connection.prepare(`SELECT COUNT(*) AS count FROM offers${where}`).get(...parameters)!.count),
+      page:search.page,pageSize:search.pageSize
+    };
   }
   getOffer(id: string): Offer | undefined {
     const row = this.connection.prepare('SELECT body FROM offers WHERE id=?').get(id);
@@ -125,18 +184,26 @@ export class Database {
     if (this.path === ':memory:') return 0;
     return [this.path,`${this.path}-wal`,`${this.path}-shm`].reduce((sum,path) => { try { return sum + statSync(path).size; } catch { return sum; } },0);
   }
+  storageDirectory(): string | null { return this.path === ':memory:' ? null : dirname(resolve(this.path)); }
   backup(): Backup { return {schemaVersion:1,exportedAt:new Date().toISOString(),settings:this.getSettings(),offers:this.listOffers(),feedback:this.listFeedback(),activity:this.listActivity(100000)}; }
   restore(input: unknown): {offers:number;preserved:number;recalibrationRequired:boolean} {
     const backup = backupSchema.parse(input);
     // Restoring an older file must not erase evidence of a send performed afterwards.
     const protectedOffers = this.listOffers().filter(offer => !offer.simulation && ['published','publishing','uncertain'].includes(offer.status));
-    const merged = new Map(backup.offers.map(offer => [offer.id,offer]));
+    const merged = new Map<string,Offer>(backup.offers.map(offer => {
+      // A backup can preserve content but cannot grant local receipt or human approval trust.
+      const restored={...offer,affiliateValid:false,affiliateReceiptId:null,manuallyApprovedAt:null};
+      if (restored.status==='approved') restored.status='review';
+      return [restored.id,restored] as const;
+    }));
     for (const offer of protectedOffers) merged.set(offer.id,offer);
     for (const offer of merged.values()) if (offer.status === 'publishing') { offer.status='uncertain'; offer.updatedAt=new Date().toISOString(); offer.reasons.push('Backup de envio em andamento: confira o WhatsApp antes de qualquer nova ação.'); }
     // A JSON file cannot attest calibration of an affiliate account.
     for (const affiliate of Object.values(backup.settings.affiliates)) affiliate.verifiedAt = null;
     this.transaction(() => {
       this.connection.exec('DELETE FROM feedback; DELETE FROM activity; DELETE FROM offers;');
+      this.clearRecords('affiliate-receipts');
+      this.clearRecords('affiliate-connections');
       this.saveSettings(backup.settings);
       for (const offer of merged.values()) this.saveOffer(offer);
       for (const feedback of backup.feedback) this.saveFeedback(feedback);

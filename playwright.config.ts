@@ -13,8 +13,9 @@ export default defineConfig({
   },
   projects:[{name:'desktop',use:{...devices['Desktop Chrome']}},{name:'mobile',use:{...devices['iPhone 13'],defaultBrowserType:'chromium'}}],
   webServer:[
+    {command:'npx tsx tests/cloud-browser-server.ts',url:'http://127.0.0.1:3032/api/v1/account',reuseExistingServer:false,timeout:30000},
     {command:'npx tsx tests/browser-server.ts',url:'http://127.0.0.1:3031/api/v1/health',reuseExistingServer:false,timeout:30000},
-    {command:'npm exec vite preview -- --config apps/web/vite.config.ts --host 127.0.0.1 --port 4174',url:'http://127.0.0.1:4174',reuseExistingServer:false,timeout:30000}
+    {command:'npx tsx tests/static-browser-server.ts',url:'http://127.0.0.1:4174',reuseExistingServer:false,timeout:30000}
   ],
   reporter:[['list'],['html',{open:'never'}]]
 });

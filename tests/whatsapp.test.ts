@@ -9,11 +9,16 @@ import type { IngestInput, Settings } from '../packages/shared/src/index.ts';
 const mock = vi.hoisted(() => ({ make: vi.fn(), auth: vi.fn(), qr: vi.fn() }));
 vi.mock('@whiskeysockets/baileys', () => ({
   default: mock.make, useMultiFileAuthState: mock.auth,
-  DisconnectReason: { loggedOut: 401, badSession: 500, connectionReplaced: 440, multideviceMismatch: 411, forbidden: 403 },
+  DisconnectReason: { loggedOut: 401, badSession: 500, connectionReplaced: 440, multideviceMismatch: 411, forbidden: 403, restartRequired: 515 },
+  WAMessageStatus: { ERROR: 0, PENDING: 1, SERVER_ACK: 2, DELIVERY_ACK: 3, READ: 4, PLAYED: 5 },
 }));
 vi.mock('qrcode', () => ({ default: { toDataURL: mock.qr } }));
 
-import { WhatsAppService, normalizeIncomingMessage } from '../apps/worker/src/whatsapp.ts';
+import { WhatsAppService, WhatsAppSendError, normalizeIncomingMessage, type WhatsAppDelivery } from '../apps/worker/src/whatsapp.ts';
+import { readJpegThumbnail } from '../apps/worker/src/jpeg-thumbnail.ts';
+
+// A real 1×1 JPEG so the frame and MIME checks exercise a decodable embedded preview.
+const jpeg = Buffer.from('/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD2miiisTQ//9k=', 'base64');
 
 const source = '123456@g.us';
 const destination = '987654@g.us';
@@ -28,6 +33,7 @@ const socketFixture = () => ({
     [source]: { id: source, subject: 'Ofertas de origem', participants: [{ id: 'private-person' }] },
     [destination]: { id: destination, subject: 'Meu grupo', participants: [] },
   }),
+  groupMetadata: vi.fn().mockImplementation(async (id: string) => ({ id, subject: 'Grupo atualizado', participants: [] })),
   sendMessage: vi.fn().mockResolvedValue({ key: { id: 'SENT-1' } }),
   logout: vi.fn().mockResolvedValue(undefined), end: vi.fn(),
 });
@@ -80,6 +86,38 @@ describe('WhatsApp normalization', () => {
     expect(normalizeIncomingMessage(incoming(undefined, { messageTimestamp: Math.floor(now / 1_000) + 600 }), options)).toBeNull();
     expect(normalizeIncomingMessage(incoming(undefined, { messageTimestamp: { low: Math.floor(now / 1_000), high: 0 } }), { ...options, notBefore: now })).not.toBeNull();
   });
+
+  it('captures only the message own validated JPEG preview, including a link preview', () => {
+    const image = normalizeIncomingMessage(incoming({ imageMessage: { caption: 'Oferta https://amazon.com.br/dp/B012345678', jpegThumbnail: jpeg } }), options);
+    expect(image).toMatchObject({ imageThumbnailBase64: jpeg.toString('base64'), imageThumbnailMime: 'image/jpeg', imageUrl: null });
+    const preview = normalizeIncomingMessage(incoming({ extendedTextMessage: { text: 'Oferta https://amazon.com.br/dp/B012345678', jpegThumbnail: jpeg.toString('base64') } }), options);
+    expect(preview?.imageThumbnailBase64).toBe(jpeg.toString('base64'));
+    const quoted = normalizeIncomingMessage(incoming({ extendedTextMessage: { text: 'Oferta https://amazon.com.br/dp/B012345678', contextInfo: {
+      quotedMessage: { imageMessage: { jpegThumbnail: jpeg } }, externalAdReply: { thumbnail: jpeg },
+    } } }), options);
+    expect(quoted?.imageThumbnailBase64).toBeUndefined();
+    const once = normalizeIncomingMessage(incoming({ viewOnceMessage: { message: { imageMessage: { caption: 'Oferta https://amazon.com.br/dp/B012345678', jpegThumbnail: jpeg } } } }), options);
+    expect(once?.text).toContain('Oferta');
+    expect(once?.imageThumbnailBase64).toBeUndefined();
+  });
+
+  it('rejects invalid, oversized or wrong-MIME previews without dropping their text', () => {
+    for (const jpegThumbnail of [Buffer.from('<svg>bad</svg>'), Buffer.alloc(200 * 1024 + 1), '/9j/!!!!', Buffer.from([0xff, 0xd8, 0xff, 0xd9])]) {
+      const result = normalizeIncomingMessage(incoming({ imageMessage: { caption: 'Oferta', jpegThumbnail } }), options);
+      expect(result?.text).toBe('Oferta');
+      expect(result?.imageThumbnailBase64).toBeUndefined();
+    }
+    expect(readJpegThumbnail(jpeg, 'image/png')).toBeNull();
+    const invalidFrame = Buffer.from(jpeg);
+    const frame = invalidFrame.indexOf(Buffer.from([0xff, 0xc0]));
+    invalidFrame.writeUInt16BE(65535, frame + 5);
+    expect(readJpegThumbnail(invalidFrame)).toBeNull();
+  });
+
+  it('ignores a source that is no longer available in the current session', () => {
+    expect(normalizeIncomingMessage(incoming(), { ...options, groups: [] })).toBeNull();
+    expect(normalizeIncomingMessage(incoming(), { ...options, groups: [{ id: source, name: 'Removed', participants: 0, available: false }] })).toBeNull();
+  });
 });
 
 describe('WhatsApp lifecycle without a real connection', () => {
@@ -90,6 +128,7 @@ describe('WhatsApp lifecycle without a real connection', () => {
   let service: WhatsAppService;
   let onMessage: ReturnType<typeof vi.fn<(input: IngestInput) => Promise<void>>>;
   let onEvent: ReturnType<typeof vi.fn<(event:string,message:string)=>void>>;
+  let onDelivery: ReturnType<typeof vi.fn<(delivery: WhatsAppDelivery) => void>>;
 
   beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'promobridge-whatsapp-'));
@@ -104,7 +143,8 @@ describe('WhatsApp lifecycle without a real connection', () => {
     mock.qr.mockReset().mockResolvedValue('data:image/png;base64,QR');
     onMessage = vi.fn<(input: IngestInput) => Promise<void>>().mockResolvedValue(undefined);
     onEvent = vi.fn();
-    service = new WhatsAppService({ authDir, onMessage, getSettings: () => settings, onEvent });
+    onDelivery = vi.fn<(delivery: WhatsAppDelivery) => void>();
+    service = new WhatsAppService({ authDir, onMessage, getSettings: () => settings, onEvent, onDelivery });
   });
 
   afterEach(async () => {
@@ -282,5 +322,170 @@ describe('WhatsApp lifecycle without a real connection', () => {
     sockets.at(-1)!.ev.emit('creds.update', {});
     await vi.waitFor(async () => expect((await stat(join(authDir, 'creds.json'))).mode & 0o777).toBe(0o600));
     expect(await readFile(join(authDir, 'creds.json'), 'utf8')).toContain('private');
+  });
+
+  it('sends a validated local JPEG and its actual caption once, without an automatic text fallback', async () => {
+    const socket = await open();
+    await expect(service.sendImage(destination, jpeg, 'Oferta com imagem')).resolves.toBe('SENT-1');
+    expect(socket.sendMessage).toHaveBeenCalledWith(destination, {
+      image: jpeg, caption: 'Oferta com imagem', mimetype: 'image/jpeg', jpegThumbnail: jpeg.toString('base64'),
+    });
+    await expect(service.sendImage(destination, jpeg, 'x'.repeat(1025))).rejects.toMatchObject({ uncertain: false });
+    await expect(service.sendImage(destination, Buffer.from('invalid'), 'Oferta')).rejects.toMatchObject({ uncertain: false });
+    socket.sendMessage.mockRejectedValueOnce(new Error('private upload token'));
+    await expect(service.sendImage(destination, jpeg, 'Outra oferta')).rejects.toMatchObject({ uncertain: true });
+    expect(socket.sendMessage).toHaveBeenCalledTimes(2);
+    expect(socket.sendMessage.mock.calls.every(([, content]) => 'image' in content)).toBe(true);
+    expect(JSON.stringify(onEvent.mock.calls)).not.toContain('private upload token');
+    expect(service.getStatus().lastSentAt).toEqual(expect.any(String));
+  });
+
+  it('bounds a hung send, reports uncertainty and never retries when its late response arrives', async () => {
+    vi.useFakeTimers();
+    const socket = await open();
+    let release: ((value: { key: { id: string } }) => void) | undefined;
+    socket.sendMessage.mockImplementationOnce(() => new Promise(resolveSend => { release = resolveSend; }));
+    const result = service.sendText(destination, 'Oferta').catch(error => error);
+    await vi.advanceTimersByTimeAsync(25_000);
+    const error = await result;
+    expect(error).toBeInstanceOf(WhatsAppSendError);
+    expect(error.uncertain).toBe(true);
+    expect(socket.sendMessage).toHaveBeenCalledTimes(1);
+    release!({ key: { id: 'LATE-ID' } });
+    await flush();
+    expect(socket.sendMessage).toHaveBeenCalledTimes(1);
+    expect(onEvent).toHaveBeenCalledWith('whatsapp.send_uncertain', expect.stringContaining('Confira o grupo'));
+  });
+
+  it('updates group names and announcement permissions from live metadata using PN and LID identities', async () => {
+    const socket = await open();
+    socket.ev.emit('groups.update', [{ id: destination, subject: 'Destino atualizado', announce: true }]);
+    expect(service.getStatus().groups.find(group => group.id === destination)).toMatchObject({ name: 'Destino atualizado', canSend: false, announcement: true });
+    await expect(service.assertCanSend(destination, 'Oferta')).rejects.toMatchObject({ uncertain: false });
+    expect(service.getStatus().diagnostics?.join(' ')).toContain('administradores');
+    socket.ev.emit('groups.upsert', [{ id: destination, subject: 'Destino LID', announce: true,
+      participants: [{ id: '123456789@lid', jid: '5511999991234@s.whatsapp.net', admin: 'admin' }] }]);
+    expect(service.getStatus().groups.find(group => group.id === destination)).toMatchObject({ isAdmin: true, canSend: true });
+    await expect(service.assertCanSend(destination, 'Oferta')).resolves.toBeUndefined();
+    socket.ev.emit('group-participants.update', { id: destination, author: 'admin', participants: ['123456789@lid'], action: 'demote' });
+    await expect(service.assertCanSend(destination, 'Oferta')).rejects.toMatchObject({ uncertain: false });
+    expect(socket.sendMessage).not.toHaveBeenCalled();
+    expect(JSON.stringify(service.getStatus())).not.toContain('551199999');
+    expect(JSON.stringify(service.getStatus())).not.toContain('123456789@lid');
+  });
+
+  it('stops receiving and sending a group immediately after the local number is removed', async () => {
+    const socket = await open();
+    socket.ev.emit('group-participants.update', { id: source, author: 'admin', participants: ['5511999991234@s.whatsapp.net'], action: 'remove' });
+    socket.ev.emit('messages.upsert', { type: 'notify', messages: [incoming()] });
+    await flush();
+    expect(onMessage).not.toHaveBeenCalled();
+    expect(service.getStatus().diagnostics?.join(' ')).toContain('origem não está disponível');
+    socket.ev.emit('group-participants.update', { id: destination, author: 'admin', participants: ['5511999991234:9@s.whatsapp.net'], action: 'remove' });
+    await expect(service.sendText(destination, 'Oferta')).rejects.toMatchObject({ uncertain: false });
+    expect(socket.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('refreshes expired destination metadata before sending and rejects a failed check without uncertainty', async () => {
+    vi.useFakeTimers();
+    const socket = await open();
+    await vi.advanceTimersByTimeAsync(60_001);
+    socket.groupMetadata.mockResolvedValueOnce({ id: destination, subject: 'Só administradores', announce: true, participants: [] });
+    await expect(service.sendText(destination, 'Oferta')).rejects.toMatchObject({ uncertain: false });
+    expect(socket.groupMetadata).toHaveBeenCalledWith(destination);
+    expect(socket.sendMessage).not.toHaveBeenCalled();
+    await service.refreshGroups();
+    await vi.advanceTimersByTimeAsync(60_001);
+    socket.groupMetadata.mockRejectedValueOnce(new Error('private auth payload'));
+    await expect(service.sendText(destination, 'Oferta')).rejects.toThrow('confirmar o acesso');
+    expect(socket.sendMessage).not.toHaveBeenCalled();
+    expect(JSON.stringify(onEvent.mock.calls)).not.toContain('private auth payload');
+  });
+
+  it('refuses metadata returned for a different group before attempting a send', async () => {
+    vi.useFakeTimers();
+    const socket = await open();
+    await vi.advanceTimersByTimeAsync(60_001);
+    socket.groupMetadata.mockResolvedValueOnce({ id: source, subject: 'Outro grupo', participants: [] });
+    await expect(service.sendText(destination, 'Oferta')).rejects.toMatchObject({ uncertain: false });
+    expect(socket.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it.each(['pause', 'destination', 'source'])('rechecks %s after the asynchronous preflight before network I/O', async changed => {
+    const socket = await open();
+    const preflight = service.assertCanSend.bind(service);
+    vi.spyOn(service, 'assertCanSend').mockImplementationOnce(async (group, text) => {
+      await preflight(group, text);
+      if (changed === 'pause') settings.paused = true;
+      else if (changed === 'destination') settings.destinationGroup = 'another@g.us';
+      else settings.sourceGroups.push(destination);
+    });
+    await expect(service.sendText(destination, 'Oferta')).rejects.toMatchObject({ uncertain: false });
+    expect(socket.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('reports receipts only for a known message, its exact group and its own sender', async () => {
+    const socket = await open();
+    await service.sendText(destination, 'Oferta');
+    socket.ev.emit('messages.update', [
+      { key: { id: 'UNKNOWN', remoteJid: destination, fromMe: true }, update: { status: 4 } },
+      { key: { id: 'SENT-1', remoteJid: source, fromMe: true }, update: { status: 4 } },
+      { key: { id: 'SENT-1', remoteJid: destination, fromMe: false }, update: { status: 4 } },
+      { key: { id: 'SENT-1', remoteJid: destination, fromMe: true }, update: { status: 1 } },
+      { key: { id: 'SENT-1', remoteJid: destination, fromMe: true }, update: { status: 3 } },
+      { key: { id: 'SENT-1', remoteJid: destination, fromMe: true }, update: { status: 3 } },
+      { key: { id: 'SENT-1', remoteJid: destination, fromMe: true }, update: { status: 4 } },
+      { key: { id: 'SENT-1', remoteJid: destination, fromMe: true }, update: { status: 3 } },
+      { key: { id: 'SENT-1', remoteJid: destination, fromMe: true }, update: { status: 2 } },
+      { key: { id: 'SENT-1', remoteJid: destination, fromMe: true }, update: { status: 0 } },
+    ]);
+    expect(onDelivery.mock.calls.map(([value]) => value)).toEqual([
+      { groupId: destination, messageId: 'SENT-1', status: 'delivered' },
+      { groupId: destination, messageId: 'SENT-1', status: 'read' },
+    ]);
+    expect(socket.sendMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows a later live retry after failed persistence and records the last successfully processed message', async () => {
+    const socket = await open();
+    onMessage.mockRejectedValueOnce(new Error('disk full'));
+    socket.ev.emit('messages.upsert', { type: 'notify', messages: [incoming()] });
+    await flush();
+    expect(service.getStatus().lastMessageAt).toBeUndefined();
+    socket.ev.emit('messages.upsert', { type: 'notify', messages: [incoming()] });
+    await flush();
+    expect(onMessage).toHaveBeenCalledTimes(2);
+    expect(service.getStatus().lastMessageAt).toEqual(expect.any(String));
+  });
+
+  it('bounds pending ingestion and reset never waits on a callback that may be waiting for reset itself', async () => {
+    const socket = await open();
+    let release: (() => void) | undefined;
+    onMessage.mockImplementationOnce(() => new Promise<void>(resolveMessage => { release = resolveMessage; }));
+    socket.ev.emit('messages.upsert', { type: 'notify', messages: Array.from({ length: 205 }, (_, index) => incoming(undefined, {
+      key: { id: `BURST-${index}`, remoteJid: source },
+    })) });
+    await flush();
+    expect(onMessage).toHaveBeenCalledTimes(1);
+    expect(onEvent.mock.calls.filter(([event]) => event === 'whatsapp.ingest_overflow')).toHaveLength(1);
+    await service.reset();
+    expect(service.getStatus()).toMatchObject({ connected: false, connecting: false });
+    release!();
+    await flush();
+    expect(onMessage).toHaveBeenCalledTimes(1);
+    await expect(stat(authDir)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('handles the expected restart after scanning QR without spending the normal reconnect budget', async () => {
+    vi.useFakeTimers();
+    const socket = await open();
+    socket.ev.emit('connection.update', { connection: 'close', lastDisconnect: { error: { output: { statusCode: 515 } } } });
+    await vi.advanceTimersByTimeAsync(100);
+    await vi.waitFor(() => expect(sockets).toHaveLength(2));
+    sockets[1].ev.emit('connection.update', { connection: 'close', lastDisconnect: { error: { output: { statusCode: 408 } } } });
+    await vi.advanceTimersByTimeAsync(999);
+    expect(sockets).toHaveLength(2);
+    await vi.advanceTimersByTimeAsync(1);
+    await vi.waitFor(() => expect(sockets).toHaveLength(3));
   });
 });

@@ -129,9 +129,10 @@ describe('local versioned API with real SQLite and a fake WhatsApp transport', (
     expect(app.runtime.database.listOffers()).toHaveLength(0);
   });
 
-  it('resolves calibration links before validation, saves readiness and prevents forged or stale markers', async () => {
+  it('canonicalizes direct products without clicking affiliate URLs, and prevents forged readiness', async () => {
     await setup();
-    expect(resolver.mock.calls.slice(0,2).map(call => call[0])).toEqual([originalUrl,affiliateUrl]);
+    expect(resolver).not.toHaveBeenCalled();
+    expect(resolver).not.toHaveBeenCalledWith(affiliateUrl);
     const response=await request<AppSnapshot>('/state');
     expect(response.body.integrations.find(item => item.id==='amazon')?.state).toBe('ready');
     const marker=response.body.settings.affiliates.amazon.verifiedAt;
@@ -147,7 +148,7 @@ describe('local versioned API with real SQLite and a fake WhatsApp transport', (
 
   it('keeps calibration blocked after unsafe resolution, mismatched products and unsupported mechanisms', async () => {
     resolver.mockRejectedValueOnce(new Error('private DNS target'));
-    const failed=await request<{valid:boolean;reason:string}>('/affiliates/amazon/calibrate','POST',config);
+    const failed=await request<{valid:boolean;reason:string}>('/affiliates/amazon/calibrate','POST',{...config,originalUrl:'https://amzn.to/unsafe'});
     expect(failed.status).toBe(200);expect(failed.body.valid).toBe(false);
     expect(failed.body.reason).not.toContain('private DNS target');
     const mismatch=await request<{valid:boolean}>('/affiliates/amazon/calibrate','POST',{...config,affiliateUrl:affiliateUrl.replace('B012345678','B087654321')});

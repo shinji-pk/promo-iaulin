@@ -6,6 +6,7 @@ export const temu: StoreAdapter = {
   identify(url) {
     if (!this.matches(url)) return null;
     const pathId = url.pathname.match(/-g-(\d{5,25})\.html(?:\/|$)/)?.[1];
+    if (!pathId && !/^\/(?:br\/)?goods\.html$/.test(url.pathname)) return null;
     const queryIds = url.searchParams.getAll('goods_id');
     if (queryIds.length > 1 || (queryIds[0] && !/^\d{5,25}$/.test(queryIds[0]))) return null;
     const id = pathId ?? queryIds[0];

@@ -1,0 +1,35 @@
+import {test,expect} from '@playwright/test';
+
+test('cria conta, salva no servidor, sai, entra e abre o guia flutuante',async({page},testInfo)=>{
+  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
+  const email=`browser-${testInfo.project.name}@example.com`,password='Minha frase de acesso 123!';
+  await page.goto('http://127.0.0.1:3032/#messages');
+  await expect(page.getByRole('button',{name:'Entrar na minha conta'})).toBeVisible();
+  await page.getByRole('tab',{name:'Criar conta'}).click();
+  await page.getByLabel('Seu nome',{exact:true}).fill('Pessoa afiliada');
+  await page.getByLabel('E-mail',{exact:true}).fill(email);
+  await page.getByLabel('Senha',{exact:true}).fill(password);
+  await page.getByRole('button',{name:'Criar minha conta'}).click();
+  await expect(page.getByRole('heading',{name:'A sua voz'})).toBeVisible();
+  await expect(page.getByText('Você está em uma demonstração.',{exact:true})).toHaveCount(0);
+  const signature=`Grupo de vendas ${testInfo.project.name}`;
+  await page.getByLabel('Assinatura das mensagens').fill(signature);
+  await page.getByRole('button',{name:'Salvar preferências',exact:true}).click();
+  await expect(page.getByRole('status')).toContainText('Preferências salvas');
+  await page.reload();await expect(page.getByLabel('Assinatura das mensagens')).toHaveValue(signature);
+  await page.getByRole('button',{name:'Minha conta',exact:true}).click();
+  await page.getByRole('button',{name:'Sair da conta',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Entrar na minha conta'})).toBeVisible();
+  await page.getByRole('tab',{name:'Entrar',exact:true}).click();
+  await page.getByLabel('E-mail',{exact:true}).fill(email);await page.getByLabel('Senha',{exact:true}).fill(password);
+  await page.getByRole('button',{name:'Entrar na minha conta'}).click();
+  await expect(page.getByLabel('Assinatura das mensagens')).toHaveValue(signature);
+  await page.getByRole('button',{name:'Guia do meu grupo'}).click();
+  const guide=page.getByRole('dialog',{name:'Guia do seu grupo de vendas'});
+  await expect(guide).toBeVisible();await guide.getByText('2. Conecte seu WhatsApp',{exact:true}).click();
+  await expect(guide.getByText(/Dispositivos conectados/)).toBeVisible();
+  await guide.getByRole('tab',{name:'Funcionalidades'}).click();await expect(guide.getByRole('button',{name:/Lojas & afiliados/})).toBeVisible();
+  await page.screenshot({path:testInfo.outputPath('guia-conta.png'),fullPage:true});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+  expect(errors).toEqual([]);
+});

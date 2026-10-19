@@ -6,18 +6,19 @@ O painel está em português e reúne fila, simulação, lojas, público, fontes
 
 ## Começar no Windows
 
-1. Instale o **Node.js 24 LTS** em [nodejs.org](https://nodejs.org).
-2. Baixe o repositório e extraia a pasta no computador.
-3. Abra `scripts/01-INSTALAR.bat`. Aguarde a instalação terminar.
-4. Abra `scripts/02-ABRIR-PAINEL.bat`. Mantenha a janela do aplicativo aberta enquanto estiver usando.
-5. Siga o guia do painel em **http://localhost:3030**. Comece em modo manual e use **Simular oferta** para conhecer o fluxo.
+1. Baixe o repositório e **extraia a pasta inteira** no computador.
+2. Abra **`INICIAR-PROMOBRIDGE.bat`** na pasta extraída. Na primeira vez, aguarde a preparação com internet.
+3. O painel abre em **http://localhost:3030**. Mantenha a janela do aplicativo aberta enquanto estiver usando.
+4. Siga o guia do painel. Comece em modo manual e use **Simular oferta** para conhecer o fluxo.
 
-Depois da instalação inicial, basta abrir `02-ABRIR-PAINEL.bat`. Não é necessário editar código, JSON, banco ou arquivos de configuração. O computador precisa ficar ligado para receber e publicar ofertas. Não execute duas cópias do aplicativo para a mesma sessão.
+O iniciador prepara uma cópia portátil do **Node.js 24.19.0** dentro da pasta do aplicativo, conferida com o SHA-256 publicado em [nodejs.org](https://nodejs.org/download/release/v24.19.0/SHASUMS256.txt). Não exige instalação global do Node nem acesso de administrador. Nas próximas vezes, abra o mesmo arquivo; a preparação só é repetida quando necessário. Os atalhos antigos em `scripts/` continuam funcionando.
+
+Não é necessário editar código, JSON, banco ou arquivos de configuração. O computador precisa ficar ligado para receber e publicar ofertas. Não execute duas cópias do aplicativo para a mesma sessão. Consulte [instalação e solução de problemas](docs/INSTALACAO.md).
 
 ## Configurar pelo painel
 
 - **Fontes:** conecte o WhatsApp pelo QR Code, selecione os grupos-fonte e um destino pela lista de nomes. Use um número separado e grupos que autorizaram o monitoramento.
-- **Lojas & afiliados:** informe sua identificação pública e um par de links do mesmo produto. Nunca informe senha, SMS, 2FA ou cookies.
+- **Lojas & afiliados:** configure sua identificação, conectores disponíveis ou biblioteca de links oficiais por produto. Nunca informe senha, SMS, 2FA ou cookies.
 - **Audiência:** ajuste categorias e palavras bloqueadas. Categorias com peso zero ficam desativadas.
 - **Automação:** escolha modo, score mínimo, frequência, horário silencioso, fuso e repetição. Uma pausa bloqueia os envios sem apagar a sessão.
 - **Mensagens:** escolha estilo, convite e assinatura. Confira a prévia de cada oferta.
@@ -34,21 +35,29 @@ As configurações e a sessão persistem entre reinicializações. Ao abrir nova
 - Persiste fila, atividade e feedback em SQLite; impede reenvio concorrente, revalida regras antes da publicação e retém envios de confirmação incerta para conferência.
 - Executa simulações sem envio ao WhatsApp. Elas ficam identificadas e não contam como publicação real.
 
-## Limites que precisam ficar claros
+## Contas e painel online
 
-**Amazon:** implementada validação estrutural de ASIN, marketplace e tag pública mediante calibração. Ela verifica a forma do link e a continuidade do produto; não comprova titularidade da conta, aprovação pelo programa nem comissão paga. Valide um envio real e confira a atribuição no programa antes de ativar a automação.
+Em **https://promo-iaulin.vercel.app**, use **Criar conta** ou **Entrar**. Nome, e-mail, preferências, simulações e o último estado sincronizado ficam no armazenamento privado do servidor, separados por usuário. Sair ou trocar de navegador não apaga esses dados. A conta não usa localStorage como banco.
 
-**Shopee, Mercado Livre, Magalu, AliExpress, SHEIN e Temu:** identificação de produto implementada; geração oficial e prova de atribuição ainda dependem de integrações específicas. A publicação dessas lojas fica bloqueada. O sistema não inventa regras de comissão a partir de parâmetros de URL.
+A senha tem pelo menos 12 caracteres; o painel permite alterá-la e sair. Envio de e-mail de recuperação e verificação de e-mail ainda não foram configurados. Guarde sua senha com cuidado.
 
-**WhatsApp:** conexão por Baileys, não oficial, com risco de restrição/bloqueio. Os testes usam mensagens e transporte controlados; o vínculo com seu número e o envio real precisam ser validados na sua máquina. Mensagens antigas, próprias e do destino são ignoradas. A versão envia texto; captura/reenvio de mídia e previews de produto são evoluções futuras.
+O computador continua executando a conexão WhatsApp e a fila persistente. Para controlá-lo pelo site: no painel local, abra **Fontes & conexões → Acessar pelo celular**, ative o acesso e copie o link de pareamento. No site, abra o avatar **Minha conta**, expanda **Passo a passo para conectar** e cole o link. Ele é válido por cinco minutos e consumido uma vez; o acesso de dispositivo dura oito horas. O túnel temporário muda ao reiniciar e não tem garantia de disponibilidade. Um túnel próprio pode ser configurado para endereço estável.
 
-**Curadoria:** score determinístico e ajuste limitado por feedback, sem classificador treinado. Preço, cupom e frete vêm da mensagem recebida; não há consulta oficial de estoque, reputação, histórico de mercado ou confirmação de cupom.
+O botão flutuante **Guia do meu grupo** explica o passo a passo, todas as áreas e as dúvidas comuns. O tema usa letras maiores, controles confortáveis e contraste reforçado.
 
-## Painel no Vercel
+## Integrações e operação
 
-O build publicado é uma **demonstração isolada no navegador**, identificada na tela. Você pode experimentar a simulação e as preferências. Ela não controla seu PC nem conecta o WhatsApp; dados de demonstração ficam nesse navegador.
+- **Amazon:** tag e ASIN estruturalmente validados; conector opcional para Creators API com credenciais da sua conta. A estrutura do link não comprova titularidade nem pagamento de comissão.
+- **Shopee e AliExpress:** conectores de API configuráveis com teste por produto. Disponibilidade, permissões e atribuição precisam ser confirmadas na conta real do programa. O contrato Shopee precisa dessa validação porque parte da documentação fica atrás do acesso de afiliado.
+- **Mercado Livre, Magalu, SHEIN e Temu:** biblioteca de pares exatos entre produto e link gerado no portal oficial. A titular declara que conferiu produto e conta; cada publicação exige aprovação manual ou agendamento explícito. Não há conversão genérica inventada nem comissão presumida.
+- **Fila:** entrada manual, correção de dados, reprocessamento, aprovação, agendamento, validade, deduplicação, silêncio, frequência e retomada automática quando a janela abrir. Confirmações ambíguas ficam retidas para conferência manual, sem reenvio automático.
+- **Mídia:** miniaturas JPEG incorporadas e limitadas podem acompanhar a mensagem. Não baixa imagens arbitrárias; mensagens maiores que a legenda permitida seguem em texto, sem repetir um envio de imagem que tenha falhado.
 
-O worker local escuta somente em `127.0.0.1`. Controle remoto real ainda exige um backend persistente com autenticação e canal seguro. Não exponha a API local à internet e não tente manter a sessão do WhatsApp em Vercel Functions.
+As credenciais de API ficam no cofre criptografado do computador e só podem ser cadastradas no painel local. Não são senhas de marketplace. Sessão, chaves e recibos de confiança não entram no backup público. Nenhuma URL afiliada de saída é aberta automaticamente para gerar um clique de verificação.
+
+**WhatsApp:** Baileys é uma integração não oficial. Vínculo, grupos, permissão para publicar e um envio real precisam ser validados com seu número. Não foram usadas contas reais das lojas nem enviadas mensagens externas nos testes automatizados.
+
+**Curadoria:** preço, frete e cupom são extraídos da mensagem. O score é determinístico e explicável; não confirma estoque, reputação, cupom ou menor preço de mercado. Os ganhos são acompanhados no portal oficial de cada loja.
 
 ## Desenvolvimento
 

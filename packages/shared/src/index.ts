@@ -25,6 +25,7 @@ export const settingsSchema = z.object({
   affiliates:z.record(z.enum(platformIds),affiliateConfigSchema).default(Object.fromEntries(platformIds.map(id=>[id,{enabled:false,publicId:'',originalUrl:'',affiliateUrl:'',verifiedAt:null}])) as Record<PlatformId,AffiliateConfig>),
   retentionDays:z.number().int().min(30).max(730).default(90), onboardingComplete:z.boolean().default(false),
   allowPriceDrop:z.boolean().default(true),priceDropPercent:z.number().min(5).max(90).default(15)
+  ,maxOfferAgeHours:z.number().int().min(1).max(168).default(24)
 });
 export type Settings = z.infer<typeof settingsSchema>;
 export const defaultSettings = (): Settings => structuredClone(settingsSchema.parse({}));
@@ -45,12 +46,16 @@ export interface Offer {
   category:CategoryId; score:number; confidence:number; factors:ScoreFactor[];
   affiliateValid:boolean; reasons:string[]; stages:Stage[]; rewrittenText:string;
   status:OfferStatus; publishedAt:string|null; imageUrl?:string|null;
+  affiliateReceiptId?:string|null; affiliateMethod?:import('./features.ts').AffiliateMethod|null;
+  requiresManualApproval?:boolean; manuallyApprovedAt?:string|null;
+  scheduledAt?:string|null; expiresAt?:string|null; providerMessageId?:string|null;
+  mediaId?:string|null;
 }
 export interface Feedback { id:string; offerId:string; action:'approve'|'reject'|'edit'; category:CategoryId; reason:string; createdAt:string; }
 export interface Activity {id:string; createdAt:string; level:'info'|'warning'|'error'; event:string; message:string; offerId?:string;}
-export interface WhatsAppGroup {id:string; name:string; participants:number;}
-export interface WhatsAppStatus {connected:boolean; connecting:boolean; qrDataUrl:string|null; user:string|null; groups:WhatsAppGroup[]; lastError:string|null;}
-export interface IngestInput {text:string; sourceId:string; sourceName:string; messageId:string; simulation:boolean; imageUrl?:string|null;}
+export interface WhatsAppGroup {id:string; name:string; participants:number;canSend?:boolean;isAdmin?:boolean;announcement?:boolean;available?:boolean;}
+export interface WhatsAppStatus {connected:boolean; connecting:boolean; qrDataUrl:string|null; user:string|null; groups:WhatsAppGroup[]; lastError:string|null;lastMessageAt?:string|null;lastSentAt?:string|null;diagnostics?:string[];}
+export interface IngestInput {text:string; sourceId:string; sourceName:string; messageId:string; simulation:boolean; imageUrl?:string|null;imageThumbnailBase64?:string;imageThumbnailMime?:'image/jpeg';}
 export interface AppSnapshot {settings:Settings; offers:Offer[]; integrations:IntegrationStatus[]; whatsapp:WhatsAppStatus; activity:Activity[]; feedbackCount:number; stats:{seen:number;published:number;review:number;blocked:number;simulated:number;}; health:{uptime:number;databaseBytes:number;version:string;};}
 
 export const ingestSchema = z.object({text:z.string().min(1).max(16000),sourceId:z.string().max(100).default('simulator'),sourceName:z.string().max(100).default('Simulador'),messageId:z.string().max(200).optional(),simulation:z.boolean().default(true)});

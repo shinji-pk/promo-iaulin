@@ -1,13 +1,15 @@
 # Segurança
 
-Não envie senhas, códigos SMS/2FA, cookies, exportações da sessão ou tokens pelo chat. O painel pede somente identificadores públicos e links de calibração. A sessão vinculada do WhatsApp fica em armazenamento local ignorado pelo Git; os arquivos de sessão equivalem a acesso à conta e precisam de proteção no computador.
+Senhas de marketplace, códigos SMS/2FA, cookies e sessões não devem ser enviados pelo chat. Credenciais específicas de APIs de afiliados são cadastradas apenas no painel local; ficam em cofre AES-256-GCM, com chave local protegida e fora do Git e do backup. Arquivos da sessão WhatsApp equivalem a acesso à conta e exigem proteção no computador.
 
-O uso de Baileys é uma integração não oficial. Pode causar restrição ou bloqueio pelo WhatsApp; use um número separado e grupos que autorizaram o monitoramento. Limites de envio reduzem excesso, mas não eliminam esse risco.
+A conta online usa Better Auth, hashes de senha da biblioteca e cookies de sessão HttpOnly/Secure. Alterações exigem origem autorizada e token CSRF. Cadastro e login têm limites de tentativas. A troca de senha revoga sessões antigas e entrega um novo cookie. Recuperação e verificação por e-mail aguardam configuração de provedor.
 
-O worker é local e escuta somente em loopback. Não faça port forwarding nem o publique diretamente. O painel hospedado é uma demonstração isolada. A API valida Host/Origin e exige token CSRF em alterações.
+O armazenamento Vercel Blob é privado; o token de acesso permanece no servidor. Cada usuário acessa somente seu próprio documento. Operações concorrentes usam ETag/CAS. O adapter de autenticação aplica transações, unicidade e referências. A solução tem limites de tamanho para pequeno volume; falhas de persistência não resultam em uma sessão fictícia.
 
-O resolvedor verifica destinos públicos em cada salto, fixa a resolução DNS no transporte e limita tempo, tamanho e redirecionamentos. Falha de DNS, produto não reconhecido, afiliação desconhecida ou link suspeito bloqueiam o envio.
+O worker escuta somente em loopback e verifica Host, origem e CSRF. Não faça port forwarding direto. O acesso remoto opcional usa túnel, código de pareamento de uso único e sessões revogáveis. Cabeçalhos de proxy impedem que uma conexão encaminhada seja confundida com administração local. Credenciais e controle de túnel permanecem restritos ao computador.
 
-Backups do painel contêm configuração pública, ofertas e atividade; não incluem sessão WhatsApp. Ainda podem conter nomes de grupos e textos recebidos: guarde-os em local privado. Segredos, bancos, sessão e dados operacionais são ignorados pelo Git.
+O proxy online fixa DNS público no transporte TLS, bloqueia redes privadas, não encaminha cookies em redirecionamentos e aceita apenas JSON ou JPEG limitado. O cookie do computador é criptografado com vínculo à conta. A resolução de links também valida DNS e cada salto. URLs afiliadas de saída não são visitadas automaticamente.
 
-Antes de uso contínuo, valide um envio real com um produto conhecido e confirme sua atribuição no programa de parceiros. A presença de uma tag não comprova titularidade, elegibilidade ou comissão paga.
+Reservas persistentes impedem envios concorrentes; confirmações ambíguas exigem conferência humana e não são repetidas automaticamente. Restaurar backup não restaura provas de afiliação ou aprovações e preserva evidência de envios posteriores.
+
+Baileys é uma integração não oficial e pode sofrer restrições pelo WhatsApp. Use número e grupos autorizados e confira uma publicação real e sua atribuição no programa antes de operar continuamente. A existência de uma tag não comprova comissão ou titularidade.

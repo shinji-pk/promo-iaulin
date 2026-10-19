@@ -1,6 +1,6 @@
 {
   "name": "promobridge",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -10,18 +10,22 @@
     "dev": "concurrently -k \"npm run worker:dev\" \"npm run web:dev\"",
     "worker:dev": "tsx watch apps/worker/src/index.ts",
     "web:dev": "vite --config apps/web/vite.config.ts",
-    "build": "tsc --noEmit && vite build --config apps/web/vite.config.ts",
-    "start": "tsx apps/worker/src/index.ts",
+    "build": "npm run build:web && npm run build:worker",
+    "start": "node dist/worker/apps/worker/src/index.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
     "test:unit": "vitest run tests/core.test.ts tests/resolver.test.ts tests/whatsapp.test.ts",
     "test:integration": "vitest run tests/api.test.ts",
     "test:e2e": "playwright test",
-    "check": "npm run lint && npm run typecheck && npm test && npm run build"
+    "check": "npm run lint && npm run typecheck && npm test && npm run build",
+    "build:web": "tsc --noEmit && vite build --config apps/web/vite.config.ts",
+    "build:worker": "tsc --project tsconfig.worker.json"
   },
   "dependencies": {
+    "@vercel/blob": "2.8.2",
     "@whiskeysockets/baileys": "6.7.24",
+    "better-auth": "1.7.11",
     "express": "5.3.0",
     "lucide-react": "0.468.0",
     "pino": "10.4.0",
@@ -46,5 +50,8 @@
     "typescript-eslint": "8.71.2",
     "vite": "8.3.4",
     "vitest": "5.0.5"
+  },
+  "overrides": {
+    "libsignal": "https://codeload.github.com/WhiskeySockets/libsignal-node/tar.gz/bcea72df9ec34d9d9140ab30619cf479c7c144c7"
   }
 }

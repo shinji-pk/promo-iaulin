@@ -1,50 +1,38 @@
-# Validação da versão 2.0.0
+# Validação 2.1.0
 
-Verificado em 18/10/2026, com Node 24.19.0 e Chromium no Linux. Não foram conectadas contas reais de WhatsApp ou de programas de afiliados, nem enviadas mensagens externas.
+Verificações em 19/10/2026, com Node 24.19.0 e Chromium no Linux. Contas reais de WhatsApp/lojas não foram vinculadas e nenhuma mensagem externa foi enviada.
 
 | Verificação | Resultado |
 | --- | --- |
-| ESLint | Passou |
-| TypeScript strict | Passou |
-| Core, adaptadores, parser e score | 91 testes passaram |
-| Segurança do resolvedor HTTPS | 86 testes passaram |
-| Normalização e ciclo de vida do WhatsApp | 34 testes passaram |
-| API e integração com SQLite real | 19 testes passaram |
-| Banco, backup e recuperação | 5 testes passaram |
-| Playwright, desktop e iPhone 13 | 8 testes passaram |
-| Build de produção Vite | Passou |
-| `npm audit`, dependências completas e de produção | Zero vulnerabilidades reportadas nas consultas executadas |
+| ESLint e TypeScript strict | Passaram |
+| Vitest: core, URLs, banco, APIs, providers, cofre, WhatsApp, contas e proxy | 429 testes passaram |
+| Playwright desktop e iPhone 13 | 10 testes passaram |
+| Build Vite e JavaScript compilado do worker | Passaram |
+| npm audit completo e de produção | Zero vulnerabilidades reportadas |
 
-## Fluxo verificado no navegador
+## Fluxos exercitados
 
-O usuário altera preferências na tela, envia pela API local com token CSRF, grava no SQLite e recupera os valores após recarregar. Também cola uma oferta, executa simulação, vê preço/score/motivo de bloqueio, registra rejeição e recupera a decisão persistida. O histórico não registra publicação real para uma simulação.
+- Cadastro, login e logout com Better Auth real; duas contas com preferências e simulações separadas; recuperação após nova instância do servidor. Cookies, CSRF, origem, senha incorreta, concorrência, unicidade, rollback e troca de senha com revogação/renovação de cookie.
+- Pelo navegador: criar conta, salvar assinatura no servidor, recarregar, sair, entrar e recuperar o valor. Guia flutuante, navegação, preferências, simulação e revisão em desktop/celular. Telas e fontes maiores inspecionadas por captura e sem rolagem horizontal nos cenários testados.
+- APIs com SQLite real e transporte controlado: entrada manual, correção, reprocessamento, agendamento, pausa/retomada, expiração, revisão humana, histórico e reconciliação de envio incerto. Preflight antes da reserva, sem repetição de uma tentativa ambígua.
+- APIs de afiliados com respostas controladas: vínculo exato de produto, configuração e credencial; mudança de conta durante a chamada; timeout; biblioteca manual; invalidação de provas e ausência de segredos em respostas/backups. Nenhuma URL afiliada de saída visitada.
+- WhatsApp controlado: QR/ciclo de vida, grupos/permissões, mensagens próprias/históricas, normalização, miniatura JPEG limitada, imagem/texto sem retry duplicado e identificação de envio.
+- Acesso remoto controlado: códigos de uso único, expiração, revogação, reinício, host exato, cookie/CSRF e bloqueio de administração por cabeçalhos encaminhados. Proxy com TLS/DNS fixado, redes privadas, redirecionamentos, limites, tipos de conteúdo e cookie criptografado por usuário.
 
-As onze páginas e o guia abrem em desktop e celular, sem erros JavaScript ou rolagem horizontal. A demonstração estática funciona quando a API não existe, persiste dados apenas naquele navegador e mantém o envio real desativado. Capturas foram inspecionadas para corrigir sobreposição no hero e representação do gráfico vazio; a linha de base não sugere publicações inexistentes.
+Os testes de contas usam backend CAS controlado com a biblioteca de autenticação real. A publicação exige também a verificação do armazenamento privado e das rotas no ambiente Vercel; os resultados finais desse smoke são registrados junto à publicação. Fixtures e testes controlados não equivalem a aprovação em programas de afiliados.
 
-Os testes de navegador usam um resolvedor de URL injetado somente no servidor de teste; isso mantém o cenário reproduzível sem acessar lojas. Os testes da API usam transporte WhatsApp controlado e SQLite real temporário. As suítes do resolvedor verificam DNS/IP, fixação do endereço, redirecionamentos, limites, timeouts, cabeçalhos e falhas fechadas, sem depender da rede externa.
+## Dependências de uso real
 
-## Proteções exercitadas
-
-- Host e Origin não autorizados, token CSRF ausente/incorreto, conteúdo inválido e campos desconhecidos.
-- Publicação manual e automática repetem as gates; mudar URL, tag, país, produto, conteúdo ou regras não libera envio inválido.
-- Mensagem com mais de oito links produz um resumo explícito dos excedentes; a resolução tem orçamento total de vinte segundos.
-- Mensagens próprias, históricas, de fontes não autorizadas e do grupo de destino são ignoradas.
-- Reservas persistentes impedem concorrência por produto; interrupção ou confirmação ambígua vira `uncertain`, sem reenvio automático.
-- Restaurar backup antigo preserva evidência dos envios posteriores e invalida marcadores de calibração.
-- Simulações e feedback órfão não treinam o score de ofertas reais.
-
-## Validação real ainda necessária
-
-| Componente | Estado e dependência |
+| Área | O que falta configurar ou confirmar |
 | --- | --- |
-| Amazon | Geração e validação estrutural implementadas. Precisa de par real de links, tag pública da proprietária e confirmação de atribuição no programa. |
-| Shopee, Mercado Livre, Magalu, AliExpress, SHEIN, Temu | Reconhecimento implementado; geração/prova de afiliação oficial ainda não implementadas. Publicação bloqueada. |
-| WhatsApp | Código de conexão, QR, grupos, sessão, reconexão e envio implementado e testado com transporte controlado. Precisa de vínculo e teste real no computador. |
-| Windows | Scripts preparados para Node 24, mas não executados em Windows neste ambiente. |
-| Mídia | Envio de texto implementado; captura e reenvio de imagem/preview não implementados. |
-| Controle remoto | Não implementado. Vercel hospeda a demonstração; worker local não fica exposto. |
+| WhatsApp | Ler o QR com o número da titular, escolher grupos, conferir permissão e uma publicação real |
+| APIs Amazon/Shopee/AliExpress | Credenciais e permissões da conta; testar produto real e atribuição no programa |
+| Demais lojas | Gerar e importar pares oficiais por produto, conferir titularidade/produto e aprovar cada envio |
+| Windows | Iniciador preparado e estrutura compilada verificada em Linux; validação final em Windows ainda necessária |
+| Túnel | Testes usam processo controlado; a conexão Cloudflare real depende da rede/conta da titular |
+| Recuperação por e-mail | Provedor não configurado; não há promessa de envio de recuperação/verificação |
 
-As sete lojas não são declaradas prontas por existirem fixtures. Na instalação inicial, todas aguardam configuração. A calibração Amazon confere a estrutura do link e a continuidade do produto; não prova titularidade, aprovação da conta ou comissão paga.
+O backend de contas usa documentos privados com limite de 8 MiB, adequado ao pequeno volume inicial. A cópia online é limitada a 3.000 ofertas/300 atividades; o histórico completo permanece no worker conforme retenção. Ver arquitetura para migração futura a Postgres.
 
 ## Reproduzir
 
@@ -54,10 +42,8 @@ npm run check
 npm run test:e2e
 ```
 
-No Windows, se o Chromium não estiver instalado para o Playwright, execute `npx playwright install chromium` antes dos testes de navegador. Essa etapa é de desenvolvimento e não é necessária para abrir o painel normal.
+Playwright precisa do Chromium instalado no ambiente de desenvolvimento. A operação normal do aplicativo não depende dos testes nem de credenciais em arquivos de código.
 
-## Integração do checkup do ambiente
+## Histórico do checkup de instalação
 
-O checkout inicial era a V1 incompleta. A revisão remota `5f20821`, recebida durante o checkup, restaurou o monorepo V2 e foi preservada integralmente. Seu lockfile continha entradas extrínsecas de esbuild para outras plataformas, causando `npm ci` com erro EBADPLATFORM no Linux. `npm install --package-lock-only --ignore-scripts` removeu essas entradas sem alterar versões declaradas nem checksums. Após isso, `npm ci`, `npm run check` (235 testes), os oito testes Playwright e a auditoria completa com zero vulnerabilidades passaram neste ambiente. A URL pública anunciada no GitHub é `https://promo-iaulin-mkce.vercel.app`; o acesso a ela e à API Vercel permanece bloqueado pela política de rede, portanto o deploy público não está confirmado.
-
-O preview Vite também foi corrigido para não herdar o proxy da API de desenvolvimento. Antes, os dois cenários de demonstração falhavam quando um worker real já estava ativo em 3030, pois o preview conectava a ele. O preview agora representa a hospedagem estática e os mesmos testes verificam a demonstração sem alterar suas asserções, enquanto o worker continua disponível separadamente.
+As revisões remotas 1c15d6c e 246f05b corrigiram o checkout incompleto, entradas extrínsecas do lockfile que causavam EBADPLATFORM no Linux e o proxy herdado pelo preview estático. Essas correções foram integradas antes da versão 2.1. A presente versão mantém o preview sem proxy e usa dependências e o mesmo commit libsignal por tarball HTTPS, evitando exigir Git/SSH no iniciador portátil.

@@ -30,7 +30,8 @@ function validateAmazonTag(input: string, expected: Product, publicId: string): 
   if (!/^[a-zA-Z0-9][a-zA-Z0-9-]{0,96}-\d{2}$/.test(publicId)) return failure('Informe uma tag pública Amazon válida (por exemplo, sua-tag-20).');
   if (url.searchParams.getAll('tag').length !== 1 || url.searchParams.get('tag') !== publicId) return failure('A tag Amazon do link não corresponde à tag pública configurada.');
   // Unknown parameters can change the redirect target or attribution; generated links use tag only.
-  const allowed = new Set(['tag','linkCode','linkId','camp','creative','creativeASIN','ref_','th','psc']);
+  const allowed = new Set(['tag','linkCode','linkId','camp','creative','creativeASIN','ref_','th','psc','language']);
+  if (url.searchParams.has('language') && (url.searchParams.getAll('language').length!==1 || (url.hostname.endsWith('amazon.com.br') ? url.searchParams.get('language')!=='pt_BR' : !/^[a-z]{2}_[A-Z]{2}$/.test(url.searchParams.get('language') ?? '')))) return failure('Idioma incompatível com o marketplace Amazon.');
   if ([...url.searchParams.keys()].some(key=>!allowed.has(key))) return failure('Parâmetros não reconhecidos no link Amazon; use o link direto do produto com a tag.');
   return {valid:true,reason:'Mesmo ASIN e marketplace; tag Amazon corresponde à configuração. Verificação estrutural, sem comprovação de titularidade ou comissão.',method:'amazon-product-tag'};
 }

@@ -4,6 +4,7 @@ import { evaluatePublication, extractUrls, MAX_LINKS_PER_MESSAGE, MAX_PROCESSING
 import { scoreOffer } from '../packages/scoring/src/index.ts';
 import { defaultSettings, platformIds, type AffiliateConfig, type Feedback, type Offer, type Settings } from '../packages/shared/src/index.ts';
 import { offerSchema } from '../packages/db/src/index.ts';
+import type { AffiliatePort } from '../packages/shared/src/features.ts';
 
 const now = new Date('2026-10-18T15:00:00.000Z');
 const original = 'https://www.amazon.com.br/dp/B09B8VGCR8';
@@ -177,6 +178,42 @@ describe('pipeline, deduplicação e isolamento',()=> {
     expect(result.slice(2).every(item=>item.reasons.some(reason=>reason.includes('Orçamento')))).toBe(true);
     expect(vi.getTimerCount()).toBe(0);
   });
+  it('inclui a conversão oficial no orçamento total e retém os demais produtos sem novas chamadas',async()=> {
+    const urls=Array.from({length:8},(_,index)=>`https://www.amazon.com.br/dp/B${String(index).padStart(9,'0')}`);
+    let calls=0;
+    const convert=vi.fn<AffiliatePort['convert']>(product=>new Promise(resolve=>{
+      if (++calls<=2) setTimeout(()=>resolve({url:`${product.canonicalUrl}?tag=garimpos-20`,receiptId:`receipt:${product.productKey}`,method:'official-api',requiresManualApproval:false,reason:'Resposta autenticada.'}),8000);
+    }));
+    const affiliatePort:AffiliatePort={convert,validate:()=>({valid:true,method:'official-api',reason:'Resposta autenticada.'})};
+    const pending=processPromotion(ingest(urls.map(url=>`Air Fryer\nR$ 299,90\n${url}`).join('\n\n')),settings(),{affiliatePort});
+    await vi.advanceTimersByTimeAsync(MAX_PROCESSING_MS);
+    const result=await pending;
+    expect(convert).toHaveBeenCalledTimes(3);
+    expect(result.slice(0,2).every(item=>item.status==='approved' && item.affiliateMethod==='official-api')).toBe(true);
+    expect(result.slice(2).every(item=>item.status==='blocked' && item.reasons.some(reason=>reason.includes('Orçamento')))).toBe(true);
+    expect(result[2].stages).toContainEqual(expect.objectContaining({name:'Afiliação',status:'blocked'}));
+    expect(vi.getTimerCount()).toBe(0);
+  });
+  it('compartilha o mesmo prazo entre redirecionamentos e integração de afiliados',async()=> {
+    const resolve=vi.fn((url:string)=>new Promise<string>(done=>setTimeout(()=>done(url),6000)));
+    const convert=vi.fn<AffiliatePort['convert']>(product=>new Promise(done=>{
+      if (convert.mock.calls.length===1) setTimeout(()=>done({url:`${product.canonicalUrl}?tag=garimpos-20`,receiptId:'receipt-1',method:'official-api',requiresManualApproval:false,reason:'Resposta autenticada.'}),5000);
+    }));
+    const pending=processPromotion(ingest(`${offerText()}\n\n${offerText(second)}`),settings(),{resolveUrl:resolve,affiliatePort:{convert,validate:()=>({valid:true,method:'official-api',reason:'Resposta autenticada.'})}});
+    await vi.advanceTimersByTimeAsync(MAX_PROCESSING_MS);
+    const result=await pending;
+    expect(result.map(item=>item.status)).toEqual(['approved','blocked']);
+    expect(resolve).toHaveBeenCalledTimes(2);
+    expect(convert).toHaveBeenCalledTimes(2);
+    expect(result[1].reasons.join(' ')).toContain('Orçamento');
+    expect(vi.getTimerCount()).toBe(0);
+  });
+  it('usa o relógio informado para criação e validade da oferta',async()=> {
+    const clock=new Date('2026-10-19T08:12:00.000Z');
+    const [result]=await processPromotion(ingest(),{...settings(),maxOfferAgeHours:6},{resolveUrl,now:()=>clock});
+    expect(result.createdAt).toBe(clock.toISOString());
+    expect(result.expiresAt).toBe('2026-10-19T14:12:00.000Z');
+  });
   it('identifica loja sem mecanismo de afiliação, mas impede publicação',async()=> {
     const [result]=await processPromotion(ingest(offerText('https://shopee.com.br/product/123/456')),settings(),{resolveUrl});
     expect(result.platform).toBe('shopee');
@@ -264,6 +301,42 @@ describe('gates de publicação sempre reavaliadas, inclusive manual',()=> {
     for(const status of ['published','publishing','uncertain'] as const) {
       expect(evaluatePublication(result,config,[{...history[0],status,publishedAt:null,updatedAt:new Date(now.getTime()-60000).toISOString()}],now).reasons.join(' ')).toMatch(/Intervalo mínimo/);
     }
+  });
+  it('mantém ofertas válidas na fila durante pausa e silêncio para reavaliar depois',async()=> {
+    for (const overrides of [{paused:true},{quietStart:'11:00',quietEnd:'13:00'}]) {
+      const config={...settings(),...overrides};
+      const [result]=await processPromotion(ingest(),config,{resolveUrl});
+      expect(result.status).toBe('approved');
+      expect(evaluatePublication(result,config,[],now,{automatic:true}).allowed).toBe(false);
+      expect(evaluatePublication(result,{...config,paused:false,quietStart:'00:00',quietEnd:'00:00'},[],now,{automatic:true}).allowed).toBe(true);
+    }
+  });
+  it('preserva a fila aprovada ao atingir frequência e libera apenas após a janela',async()=> {
+    const config={...settings(),maxPostsPerHour:1,minIntervalMinutes:5};
+    const prior=await offer({id:'previous',productKey:'outro-produto',sourceMessageId:'previous-message',status:'published',publishedAt:now.toISOString()});
+    const [result]=await processPromotion(ingest(),config,{resolveUrl,history:[prior]});
+    expect(result.status).toBe('approved');
+    expect(evaluatePublication(result,config,[prior],now,{automatic:true}).allowed).toBe(false);
+    expect(evaluatePublication(result,config,[prior],new Date(now.getTime()+3_600_001),{automatic:true}).allowed).toBe(true);
+  });
+  it('o agendamento respeita pausa, silêncio e validade, inclusive na checagem temporária',async()=> {
+    const result=await offer({scheduledAt:new Date(now.getTime()+60_000).toISOString(),expiresAt:new Date(now.getTime()+120_000).toISOString()});
+    expect(evaluatePublication(result,settings(),[],now).reasons.join(' ')).toMatch(/agendado/);
+    expect(evaluatePublication(result,settings(),[],new Date(now.getTime()+60_000)).allowed).toBe(true);
+    expect(evaluatePublication(result,{...settings(),paused:true},[],new Date(now.getTime()+60_000)).allowed).toBe(false);
+    expect(evaluatePublication(result,settings(),[],new Date(now.getTime()+120_000),{ignoreTemporary:true}).reasons.join(' ')).toMatch(/venceu/);
+  });
+  it('links conferidos pela proprietária exigem aprovação explícita e jamais entram no envio automático',async()=> {
+    const affiliatePort:AffiliatePort={
+      convert:async product=>({url:`${product.canonicalUrl}?tag=garimpos-20`,receiptId:'receipt-owner',method:'owner-reviewed',requiresManualApproval:true,reason:'Conferência da proprietária.'}),
+      validate:()=>({valid:true,method:'owner-reviewed',reason:'Conferência da proprietária.'})
+    };
+    const [result]=await processPromotion(ingest(),settings(),{affiliatePort});
+    expect(result.status).toBe('review');
+    expect(evaluatePublication(result,settings(),[],now,{affiliatePort}).allowed).toBe(false);
+    const approved={...result,status:'approved' as const,manuallyApprovedAt:now.toISOString()};
+    expect(evaluatePublication(approved,settings(),[],now,{affiliatePort}).allowed).toBe(true);
+    expect(evaluatePublication(approved,settings(),[],now,{affiliatePort,automatic:true,ignoreTemporary:true}).allowed).toBe(false);
   });
   it.each([second,`${original}?tag=outra-20`,'https://evil.example/product','http://evil.example/','ftp://evil.example/','www.evil.example','exemplo.рф','192.168.1.1/path'])('recusa endereço extra na mensagem final: %s',async extra=> {
     const result=await offer();
