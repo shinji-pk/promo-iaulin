@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:unit": "vitest run tests/core.test.ts tests/resolver.test.ts tests/whatsapp.test.ts",
+    "test:unit": "vitest run tests/core.test.ts tests/resolver.test.ts tests/whatsapp.test.ts tests/security-questions.test.ts",
     "test:integration": "vitest run tests/api.test.ts",
     "test:e2e": "playwright test",
     "check": "npm run lint && npm run typecheck && npm test && npm run build",
