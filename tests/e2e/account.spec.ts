@@ -26,7 +26,17 @@ test('cria conta, salva no servidor, sai, entra e abre o guia flutuante',async({
   await page.getByRole('button',{name:'Ver como ativar'}).click();
   const installerGuide=page.getByRole('dialog',{name:'Conecte o WhatsApp sem complicação'});
   await expect(installerGuide).toBeVisible();
-  await expect(installerGuide.getByRole('link',{name:/Baixar programa para Windows/})).toHaveAttribute('href','https://github.com/shinji-pk/promo-iaulin/releases/download/desktop-preview-38/Promo-Iaulin-Setup.exe');
+  await expect(installerGuide.getByRole('link',{name:/Baixar programa para Windows/})).toHaveAttribute('href','/api/v1/download/windows');
+  await expect(installerGuide).toContainText('Primeiro, vamos baixar seu aplicativo!');
+  await expect(installerGuide.getByRole('link',{name:/Baixar Promo Iaulin para Windows/})).toHaveAttribute('href','/api/v1/download/windows');
+  await installerGuide.getByRole('button',{name:/Já encontrei o arquivo/}).click();
+  await expect(installerGuide).toContainText('Agora é só instalar');
+  await installerGuide.getByRole('button',{name:/Já instalei/}).click();
+  await expect(installerGuide).toContainText('Vamos abrir seu novo ajudante');
+  await installerGuide.getByRole('button',{name:/Abri o WhatsApp/}).click();
+  await installerGuide.getByRole('button',{name:/iPhone/}).click();
+  await expect(installerGuide).toContainText('Toque em Ajustes');
+  await installerGuide.getByRole('button',{name:/Já li o código/}).click();
   await expect(installerGuide).toContainText('Vincular minha conta online');
   await installerGuide.getByRole('button',{name:'Entendi'}).click();
   await page.goto('http://127.0.0.1:3032/#sources');

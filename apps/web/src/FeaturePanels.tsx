@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight, CalendarClock, Check, ChevronDown, Download, ExternalLink, Link2, LoaderCircle, Pencil, Plus, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
+import { ArrowRight, CalendarClock, Check, ChevronDown, ExternalLink, Link2, LoaderCircle, Pencil, Plus, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
 import { categoryIds, categoryNames, platformNames, type CategoryId, type Offer, type PlatformId } from '../../../packages/shared/src/index.ts';
 import type { ApprovedLink, CredentialStatus, IntegrationGuide, SetupStatus } from '../../../packages/shared/src/features.ts';
 import { api, isDemonstration } from './api.ts';
+import { LocalSetupWizard } from './LocalSetupWizard.tsx';
 import { Badge, Button, EmptyState, Field, Modal, SectionTitle } from './ui.tsx';
 
 function message(error: unknown) { return error instanceof Error ? error.message : 'Não foi possível concluir. Tente novamente.'; }
@@ -14,22 +15,7 @@ function downloadJson(data: unknown, filename: string) {
 }
 
 export function LocalSetupModal({ onClose }: { onClose: () => void }) {
-  return <Modal title="Conecte o WhatsApp sem complicação" subtitle="Seu computador faz o trabalho. Não precisa criar conta na Render, instalar Node.js nem abrir CMD." onClose={onClose}>
-    <div className="feature-stack">
-      <ol className="feature-guide-steps">
-        <li><b>Baixe o instalador para Windows:</b> abra a página de versões e selecione o arquivo <b>Promo-Iaulin-Setup.exe</b> na versão de teste disponível.</li>
-        <li><b>Instale e abra Promo Iaulin.</b> O servidor local inicia sozinho e pode ficar minimizado próximo ao relógio do Windows.</li>
-        <li><b>Conecte seu WhatsApp:</b> clique em <b>Conectar WhatsApp</b> no programa. No celular, abra Dispositivos conectados → Conectar dispositivo e escaneie o QR Code.</li>
-        <li><b>Quer usar também pelo site?</b> No programa, clique em <b>Vincular minha conta online</b>, faça login no site e confirme a conexão. Sem copiar códigos ou criar servidor na Render.</li>
-      </ol>
-      <div className="feature-inline-actions">
-        <a className="button button-primary" href="https://github.com/shinji-pk/promo-iaulin/releases/download/desktop-preview-38/Promo-Iaulin-Setup.exe" target="_blank" rel="noopener noreferrer"><Download size={16}/> Baixar programa para Windows (.exe)</a>
-        <a className="text-link" href="http://127.0.0.1:3030/#sources" target="_blank" rel="noopener noreferrer">Já instalei: abrir painel local <ExternalLink size={14}/></a>
-      </div>
-      <div className="notice notice-subtle"><ShieldCheck size={17}/><p><b>Importante:</b> o programa precisa permanecer ativo no computador para receber e enviar ofertas. Fechar somente a aba do site não para o bot. Esta versão de teste ainda precisa de validação com WhatsApp real e não tem assinatura digital; o Windows pode avisar sobre editor desconhecido. Não desative as proteções do sistema.</p></div>
-    </div>
-    <div className="modal-footer"><Button variant="secondary" onClick={onClose}>Entendi</Button></div>
-  </Modal>;
+  return <LocalSetupWizard onClose={onClose} />;
 }
 export function LocalSetupButton() {
   const [open, setOpen] = useState(false);

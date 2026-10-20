@@ -77,6 +77,13 @@ describe('cloud account API with real Express, Better Auth and persistent isolat
     expect(result.status).toBe(200);
     return result.json() as Promise<AppSnapshot>;
   }
+  it('inicia o download de Windows diretamente, mesmo antes de criar uma conta', async () => {
+    const response = await fetch(base + '/api/v1/download/windows', { redirect: 'manual' });
+    expect(response.status).toBe(302);
+    expect(response.headers.get('location')).toBe('https://github.com/shinji-pk/promo-iaulin/releases/download/desktop-preview-38/Promo-Iaulin-Setup.exe');
+    expect(response.headers.get('cache-control')).toBe('no-store');
+  });
+
   beforeEach(async () => {
     vi.stubEnv('BETTER_AUTH_SECRET', secret);
     backend = new MemoryBackend();

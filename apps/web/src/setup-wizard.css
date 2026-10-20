@@ -1,0 +1,74 @@
+/* Interactive Windows onboarding, embedded in the customer-facing application. */
+.install-wizard{display:flex;flex-direction:column;gap:20px;color:#473342;font-size:15px}
+.install-wizard-progress{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.install-wizard-progress-item{border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;color:#92808d;padding:4px 2px;font-weight:600}
+.install-wizard-progress-item:disabled{opacity:.58;cursor:default}
+.install-wizard-progress-circle{display:grid;place-items:center;border:1px solid #e6dce3;background:#f9f6f8;border-radius:50%;width:35px;height:35px;font-size:14px;font-weight:700;color:#886b7f}
+.install-wizard-progress-item.is-current{color:#6a4058}
+.install-wizard-progress-item.is-current .install-wizard-progress-circle{color:#fff;background:#6e435d;border-color:#6e435d;box-shadow:0 0 0 4px #f2eaf0}
+.install-wizard-progress-item.is-done .install-wizard-progress-circle{background:#e6f0e5;border-color:#c8dbc5;color:#4a7955}
+.install-wizard-meter{height:6px;background:#f0e9ee;border-radius:99px;overflow:hidden;margin-top:-8px}
+.install-wizard-meter span{display:block;height:100%;background:#b58ca4;border-radius:99px;transition:width .25s}
+.install-wizard-content{min-height:335px}
+.install-wizard-heading{display:flex;align-items:center;gap:17px;margin-bottom:20px}
+.install-wizard-heading h3{font-family:Georgia,serif;font-weight:500;font-size:25px;line-height:1.25;color:#493444;letter-spacing:-.4px;margin:3px 0 6px}
+.install-wizard-heading p{font-size:15px;color:#7c6d79;line-height:1.6}
+.install-wizard-kicker{font-size:10px;font-weight:800;letter-spacing:1px;color:#aa7d98}
+.install-wizard-hero-icon{display:grid;place-items:center;flex-shrink:0;width:66px;height:66px;border-radius:19px;background:#efe5ec;color:#805671}
+.install-wizard-stage{border:1px solid #ede3e9;background:#fffcfe;border-radius:17px;padding:19px;display:flex;flex-direction:column;gap:15px}
+.install-wizard-illustration{display:flex;justify-content:center;align-items:center;gap:25px;min-height:155px;background:linear-gradient(140deg,#f9f3f7,#f0eaf2);border-radius:13px;padding:20px}
+.install-wizard-computer{width:190px;flex-shrink:0;display:flex;flex-direction:column;align-items:center}
+.install-wizard-computer-screen{width:190px;height:112px;border:8px solid #493646;border-radius:10px;background:#fefbfe;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#50384b}
+.install-wizard-computer-screen b{font-size:16px}
+.install-wizard-computer-screen small{font-size:10px;color:#997e91}
+.install-wizard-computer-neck{height:10px;width:70px;background:#a89ba4;border-radius:0 0 7px 7px}
+.install-wizard-logo{color:#8b637f;font-family:Georgia,serif;font-size:27px;font-weight:700;line-height:1}
+.install-wizard-logo span{font-size:13px}
+.install-wizard-file{border:2px solid #dcc5d5;border-radius:15px;transform:rotate(5deg);padding:13px 12px;display:flex;flex-direction:column;align-items:center;background:white;box-shadow:0 8px 18px #60405a19;min-width:105px;color:#875e79}
+.install-wizard-file b{font-size:12px;margin-top:6px}
+.install-wizard-file span{font-size:11px;color:#a192a0}
+.install-wizard-explanation{line-height:1.75;color:#615360;font-size:15px}
+.install-wizard-download,.install-wizard-local{background:#6e435d;color:#fff;border-radius:12px;min-height:52px;text-align:center;display:flex;justify-content:center;align-items:center;gap:10px;padding:12px 16px;font-weight:700;font-size:16px;text-decoration:none}
+.install-wizard-download:hover,.install-wizard-local:hover{background:#573449;color:#fff}
+.install-wizard-help-text{font-size:13px;color:#8b7986;text-align:center;line-height:1.65}
+.install-wizard-demo-list{display:flex;flex-direction:column;gap:13px}
+.install-wizard-demo-item{display:flex;align-items:flex-start;gap:13px}
+.install-wizard-demo-item>span,.install-wizard-next-steps p span{width:29px;height:29px;background:#efe4ec;color:#79506c;font-weight:800;border-radius:10px;flex-shrink:0;display:grid;place-items:center}
+.install-wizard-demo-item b{display:block;color:#553c4d;font-size:15px;margin-bottom:4px}
+.install-wizard-demo-item p{color:#786b75;font-size:14px;line-height:1.6}
+.install-wizard-help-toggle{display:flex;justify-content:space-between;align-items:center;border:1px solid #e7d9e2;border-radius:10px;padding:11px 12px;background:#faf5f8;text-align:left;font-size:14px;color:#6c4960}
+.install-wizard-help-toggle[aria-expanded=true] svg{transform:rotate(90deg)}
+.install-wizard-alert{padding:13px;border-radius:10px;background:#fff5e7;color:#73562e;font-size:14px;line-height:1.7;border:1px solid #f0dfbf}
+.install-wizard-app-demo{background:#f8f1f6;border:1px solid #e4d6e1;border-radius:13px;max-width:345px;margin:auto;width:100%;padding:15px;display:flex;align-items:center;flex-direction:column;gap:15px;box-shadow:0 10px 23px #44324210}
+.install-wizard-app-bar{background:#463244;border-radius:9px;padding:10px 14px;display:flex;align-items:center;width:100%;gap:8px;color:white}
+.install-wizard-app-brand{font-family:Georgia,serif;color:#e1d4b4}
+.install-wizard-app-dots{margin-left:auto;color:#ae99a8;font-size:8px}
+.install-wizard-app-demo>p{font-size:13px;color:#897584}
+.install-wizard-app-status{font-size:14px;color:#456b49;display:flex;align-items:center;gap:8px}
+.install-wizard-pulse{width:9px;height:9px;border-radius:50%;background:#85b98b}
+.install-wizard-app-button{display:flex;align-items:center;gap:8px;background:#6e435d;color:#fff;border-radius:9px;padding:10px 19px;font-size:14px;font-weight:700;margin-bottom:5px}
+.install-wizard-tip{display:flex;gap:10px;align-items:flex-start;padding:12px;background:#f5f7f2;border:1px solid #dbe7d9;border-radius:10px;color:#4b6950;font-size:14px;line-height:1.6}
+.install-wizard-tip svg{flex-shrink:0}
+.install-wizard-phone-tabs{display:flex;gap:10px}
+.install-wizard-phone-tabs button{border:1px solid #e1d7dd;border-radius:99px;padding:10px 19px;background:#fff;font-size:15px;color:#695365}
+.install-wizard-phone-tabs button.is-selected{border-color:#7b5870;background:#f4e9ef;color:#634158;font-weight:750}
+.install-wizard-phone-steps{display:flex;align-items:center;gap:20px}
+.install-wizard-phone-illustration{position:relative;background:#f6edf3;display:grid;place-items:center;color:#8b6480;width:105px;min-width:105px;height:145px;border-radius:13px}
+.install-wizard-phone-illustration span{position:absolute;display:grid;place-items:center;top:58px;left:39px;background:#fff;border-radius:5px;padding:4px}
+.install-wizard-celebration{display:flex;align-items:center;justify-content:center;gap:20px;font-size:36px;padding:5px}
+.install-wizard-celebration-check{width:73px;height:73px;display:grid;place-items:center;background:#e5f0e4;color:#53825b;border-radius:50%;box-shadow:0 0 0 8px #f1f6ef}
+.install-wizard-next-steps{display:flex;flex-direction:column;gap:12px}
+.install-wizard-next-steps>b{font-size:16px}
+.install-wizard-next-steps p{display:flex;align-items:center;gap:12px;font-size:14px;line-height:1.7;color:#645460}
+.install-wizard-next-steps p span{font-size:13px}
+.install-wizard-local{background:#f1e6ee;color:#633f57;font-size:15px;min-height:48px}
+.install-wizard-local:hover{background:#e7d7e2;color:#4f3143}
+.install-wizard-actions{display:flex;gap:12px;align-items:center;justify-content:space-between}
+.install-wizard-actions button{display:flex;align-items:center;justify-content:center;gap:8px;border-radius:11px;padding:13px 16px;min-height:48px;font-size:15px;font-weight:700}
+.install-wizard-back{background:transparent;border:1px solid #e2d5dd;color:#775a6d}
+.install-wizard-back:disabled{opacity:.4;cursor:default}
+.install-wizard-next{background:#6e435d;color:#fff;border:1px solid #6e435d;flex:1;max-width:330px}
+.install-wizard-next:hover{background:#58354b}
+.install-wizard-bottom{text-align:center;font-size:12px;color:#9e8c9a}
+@media(max-width:610px){.install-wizard{gap:15px}.install-wizard-progress-circle{width:28px;height:28px}.install-wizard-progress-item{font-size:10px}.install-wizard-heading{align-items:flex-start;gap:12px}.install-wizard-hero-icon{width:48px;height:48px;border-radius:13px}.install-wizard-hero-icon svg{width:24px}.install-wizard-heading h3{font-size:21px}.install-wizard-kicker{font-size:9px}.install-wizard-stage{padding:13px}.install-wizard-computer,.install-wizard-computer-screen{width:160px}.install-wizard-file{min-width:75px}.install-wizard-file b{font-size:10px}.install-wizard-illustration{gap:10px}.install-wizard-phone-steps{flex-direction:column;align-items:stretch}.install-wizard-phone-illustration{display:none}.install-wizard-actions{gap:6px}.install-wizard-actions button{font-size:13px;padding:10px}.install-wizard-next{max-width:none;flex:1.7}}
+@media(prefers-reduced-motion:reduce){.install-wizard-meter span{transition:none}}
