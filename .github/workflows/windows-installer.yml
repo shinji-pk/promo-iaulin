@@ -116,3 +116,19 @@ jobs:
           $tag = "desktop-preview-${{ github.run_number }}"
           gh release create $tag 'release/Promo-Iaulin-Setup.exe' --target '${{ github.sha }}' --title "Promo Iaulin | Instalador Windows (teste #${{ github.run_number }})" --notes "Versao preliminar para validacao em Windows 10/11 x64. Interface grafica, sem CMD, com dados preservados em AppData. Ainda sem assinatura digital; pode exibir um aviso do SmartScreen. Precisa ficar aberto para processar grupos WhatsApp." --prerelease
           if ($LASTEXITCODE -ne 0) { throw "Falha ao publicar executavel de teste" }
+          # Customers always download through the app's own /api/v1/download/windows path.
+          # Refresh one stable release asset after the numbered test release succeeds.
+          $latest = 'desktop-latest'
+          $listed = gh release list --json tagName --limit 100
+          if ($LASTEXITCODE -ne 0) { throw "Nao foi possivel consultar as versoes publicadas" }
+          $known = $listed | ConvertFrom-Json
+          $notes = "Instalador Windows de teste mais recente. Uso guiado dentro do aplicativo, com servidor local e WhatsApp por QR Code. Sem assinatura digital; nao desative as protecoes do Windows."
+          if (@($known | ForEach-Object { $_.tagName }) -contains $latest) {
+            gh release upload $latest 'release/Promo-Iaulin-Setup.exe' --clobber
+            if ($LASTEXITCODE -ne 0) { throw "Falha ao atualizar instalador publico" }
+            gh release edit $latest --title "Promo Iaulin | Instalador Windows mais recente" --notes $notes
+            if ($LASTEXITCODE -ne 0) { throw "Falha ao atualizar informacoes do instalador" }
+          } else {
+            gh release create $latest 'release/Promo-Iaulin-Setup.exe' --target '${{ github.sha }}' --title "Promo Iaulin | Instalador Windows mais recente" --notes $notes --prerelease
+            if ($LASTEXITCODE -ne 0) { throw "Falha ao publicar instalador para clientes" }
+          }

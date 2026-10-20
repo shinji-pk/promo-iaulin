@@ -382,7 +382,7 @@ export function createApp(options:AppOptions={}):Express & {runtime:WorkerRuntim
     return Boolean(match && timingSafeEqual(createHash('sha256').update(match[1]).digest(),cloudDigest));
   };
   // The same friendly download is also available when browsing the local panel.
-  app.get('/api/v1/download/windows',(_req,response)=>response.redirect(302,'https://github.com/shinji-pk/promo-iaulin/releases/download/desktop-preview-38/Promo-Iaulin-Setup.exe'));
+  app.get('/api/v1/download/windows',(_req,response)=>response.redirect(302,'https://github.com/shinji-pk/promo-iaulin/releases/download/desktop-latest/Promo-Iaulin-Setup.exe'));
   app.disable('x-powered-by');
   app.set('trust proxy',false);
   // Hosting platforms need an unauthenticated liveness probe that reveals nothing else.

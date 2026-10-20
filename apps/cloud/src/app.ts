@@ -47,7 +47,7 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
   const app=express();app.disable('x-powered-by');app.set('trust proxy',1);
   app.use((_req,res,next)=>{res.set({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'no-referrer'});next();});
   // One-click customer download. Public, fixed destination: never accepts an arbitrary URL.
-  app.get('/api/v1/download/windows',(_req,res)=>res.redirect(302,'https://github.com/shinji-pk/promo-iaulin/releases/download/desktop-preview-38/Promo-Iaulin-Setup.exe'));
+  app.get('/api/v1/download/windows',(_req,res)=>res.redirect(302,'https://github.com/shinji-pk/promo-iaulin/releases/download/desktop-latest/Promo-Iaulin-Setup.exe'));
   app.all('/api/auth/{*splat}',(req,res)=>toNodeHandler(auth())(req,res));
   app.use(express.json({limit:'20mb',strict:true}));
   app.get('/api/v1/account/capabilities',(_req,res)=>res.json({passwordRecovery:hasEmailProvider(),emailChange:hasEmailProvider()}));
