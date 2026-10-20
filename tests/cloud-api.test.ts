@@ -148,7 +148,7 @@ describe('cloud account API with real Express, Better Auth and persistent isolat
     expect(await (await api('/api/v1/account', { identity: alice })).json()).toMatchObject({ user: { name: 'Alice atualizada' } });
     expect(await (await api('/api/v1/account', { identity: bob })).json()).toMatchObject({ user: { name: 'Pessoa de teste' } });
     const nextPassword = 'Uma nova senha longa 456!';
-    const result = await api('/api/v1/account/password', { identity: alice, body: { currentPassword: password, newPassword: nextPassword } });
+    const result = await api('/api/v1/account/password', { identity: alice, body: { currentPassword: password, newPassword: nextPassword, confirmPassword: nextPassword } });
     expect(result.status).toBe(200);
     const replacement = result.headers.getSetCookie().map(item => item.split(';')[0]).join('; ');
     expect(replacement).toContain('session_token=');
