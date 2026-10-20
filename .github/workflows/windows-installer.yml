@@ -11,6 +11,9 @@ on:
       - 'package-lock.json'
       - 'tsconfig*.json'
   workflow_dispatch:
+concurrency:
+  group: promo-iaulin-windows-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
