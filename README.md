@@ -87,3 +87,7 @@ npm start
 - [Status de validação](docs/VALIDACAO.md)
 
 Sessão, bancos, logs e backups locais ficam fora do Git. Guarde backups em local privado; eles podem conter nomes de grupos e textos de ofertas.
+
+## Minha conta e recuperação de senha
+
+No painel, a área **Minha conta** permite editar nome, nome de usuário (apenas para exibição), telefone de contato não verificado e foto (até 140 KB); também permite solicitar troca de e-mail com confirmação e alterar a senha. A tela de acesso oferece **Esqueci minha senha** e redefinição com token temporário. É necessário configurar `RESEND_API_KEY` e `RESEND_FROM_EMAIL` (remetente validado) na Vercel antes que e-mails de recuperação e troca de e-mail possam ser enviados. Enquanto o provedor estiver ausente, o aplicativo informa que o envio não está disponível, sem simular sucesso. Mudança de senha não apaga preferências ou dados persistidos.
