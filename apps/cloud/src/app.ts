@@ -39,6 +39,11 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
   const managedWorker=()=>options.managedWorker!==undefined?options.managedWorker:managedWorkerFromEnv();
   const secret=()=>options.secret??process.env.BETTER_AUTH_SECRET!;
   const csrfFor=(sessionId:string)=>createHmac('sha256',secret()).update(`csrf:${sessionId}`).digest('base64url');
+  const validOrigin=(req:Request)=>req.get('origin')===new URL(options.baseURL??process.env.BETTER_AUTH_URL??'https://promo-iaulin.vercel.app').origin;
+  const validCsrf=(req:Request,sessionId:string)=>{
+    const expected=Buffer.from(csrfFor(sessionId)),given=Buffer.from(req.get('x-csrf-token')??'');
+    return given.length===expected.length&&timingSafeEqual(given,expected);
+  };
   const app=express();app.disable('x-powered-by');app.set('trust proxy',1);
   app.use((_req,res,next)=>{res.set({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'no-referrer'});next();});
   app.all('/api/auth/{*splat}',(req,res)=>toNodeHandler(auth())(req,res));
@@ -56,6 +61,8 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
     try {
       const session=await auth().api.getSession({headers:fromNodeHeaders(req.headers)});
       if(!session){res.status(401).json({error:'Entre na sua conta para configurar a recuperação.'});return;}
+      if(!validOrigin(req)||!validCsrf(req,session.session.id)){res.status(403).json({error:'Recarregue a página antes de salvar.'});return;}
+      if(!req.is('application/json')){res.status(415).json({error:'Envie dados JSON.'});return;}
       const parsed=z.object({currentPassword:z.string().min(1).max(128),questions:z.array(z.object({id:z.string().max(100),answer:z.string().max(120)}).strict()).length(3)}).strict().parse(req.body);
       await createSecurityQuestionService().enroll(session.user.id,parsed.currentPassword,parsed.questions);
       res.json({configured:true});
@@ -67,6 +74,8 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
   });
   app.post('/api/v1/account/recover-with-questions',async(req,res)=>{
     try {
+      if(!validOrigin(req)){res.status(403).json({error:'Origem não autorizada.'});return;}
+      if(!req.is('application/json')){res.status(415).json({error:'Envie dados JSON.'});return;}
       const parsed=z.object({email:z.email().max(254),newPassword:z.string().min(12).max(128),confirmPassword:z.string().min(12).max(128),
         questions:z.array(z.object({id:z.string().max(100),answer:z.string().max(120)}).strict()).length(3)}).strict().parse(req.body);
       await createSecurityQuestionService().reset(parsed.email,parsed.questions,parsed.newPassword,parsed.confirmPassword);
