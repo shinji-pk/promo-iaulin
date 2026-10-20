@@ -2,10 +2,22 @@ import { betterAuth } from 'better-auth';
 import { blobAuthAdapter, emptyAuthDocument, type AuthDocument } from './blob-auth-adapter.ts';
 import { createBlobJsonStore, type JsonDocumentStore } from './blob-store.ts';
 
-export const hasEmailProvider = () => Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL);
+// A single verified domain can serve several apps without branding the sender as one app.
+// Leave TRANSACTIONAL_EMAIL_DOMAIN unset until DNS verification is complete in Resend.
+// The legacy explicit sender takes precedence, preserving existing deployments.
+export function getEmailSender(): string | null {
+  const explicit = process.env.RESEND_FROM_EMAIL?.trim();
+  if (explicit) return explicit;
+  const domain = process.env.TRANSACTIONAL_EMAIL_DOMAIN?.trim().toLowerCase();
+  const valid = domain && /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/.test(domain)
+    && !domain.endsWith('.vercel.app');
+  return valid ? `Promo IAulin <promo@${domain}>` : null;
+}
+export const hasEmailProvider = () => Boolean(process.env.RESEND_API_KEY && getEmailSender());
 async function sendEmail(to:string,subject:string,body:string):Promise<void> {
-  if (!hasEmailProvider()) throw new Error('Envio de e-mails não configurado.');
-  const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+process.env.RESEND_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({from:process.env.RESEND_FROM_EMAIL,to:[to],subject,text:body}),signal:AbortSignal.timeout(12000)});
+  const sender = getEmailSender();
+  if (!process.env.RESEND_API_KEY || !sender) throw new Error('Envio de e-mails não configurado.');
+  const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+process.env.RESEND_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({from:sender,to:[to],subject,text:body}),signal:AbortSignal.timeout(12000)});
   if (!response.ok) throw new Error('O serviço de e-mail recusou o envio.');
 }
 export interface CloudAuthOptions {
