@@ -51,6 +51,3 @@ Name: "{autodesktop}\Promo Iaulin"; Filename: "{app}\PromoIaulin.exe"; WorkingDi
 [Run]
 Filename: "{app}\PromoIaulin.exe"; Description: "Abrir Promo Iaulin agora"; Flags: nowait postinstall skipifsilent
 
-[UninstallDelete]
-; Nunca excluir automaticamente %LOCALAPPDATA%\Promo Iaulin.
-; Esta pasta guarda o banco de dados, credenciais criptografadas e a sessao do WhatsApp.
