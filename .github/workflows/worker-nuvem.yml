@@ -37,7 +37,15 @@ jobs:
         run: |
           TOKEN=$(head -c 33 /dev/urandom | base64 | tr -d '\n=+/')
           docker run -d --name w -p 10000:10000 -e PROMOBRIDGE_CLOUD_TOKEN="$TOKEN" promo-iaulin-whatsapp
-          for i in $(seq 1 20); do curl -fsS localhost:10000/healthz && break || sleep 2; done
-          test "$(curl -s -o /dev/null -w '%{http_code}' localhost:10000/api/v1/state)" != 200
-          curl -fsS -H "Authorization: Bearer $TOKEN" localhost:10000/api/v1/state > /dev/null
+          fail() { echo "::error title=$1::$(docker logs w 2>&1 | tail -25 | tr '\n' '|' | head -c 1500)"; docker logs w || true; exit 1; }
+          up=0
+          for i in $(seq 1 30); do
+            if curl -fsS localhost:10000/healthz; then up=1; break; fi
+            sleep 2
+          done
+          [ "$up" = 1 ] || fail "Servidor nao subiu"
+          anon=$(curl -s -o /dev/null -w '%{http_code}' localhost:10000/api/v1/state || true)
+          [ "$anon" != 200 ] || fail "Acesso sem senha foi liberado"
+          code=$(curl -s -o /tmp/state.json -w '%{http_code}' -H "Authorization: Bearer $TOKEN" localhost:10000/api/v1/state || true)
+          [ "$code" = 200 ] || fail "Acesso com senha falhou ($code) $(head -c 300 /tmp/state.json 2>/dev/null)"
           docker logs w
