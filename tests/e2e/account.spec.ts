@@ -26,7 +26,6 @@ test('cria conta, salva no servidor, sai, entra e abre o guia flutuante',async({
   await page.getByRole('button',{name:'Ver como ativar'}).click();
   const installerGuide=page.getByRole('dialog',{name:'Conecte o WhatsApp sem complicação'});
   await expect(installerGuide).toBeVisible();
-  await expect(installerGuide.getByRole('link',{name:/Baixar programa para Windows/})).toHaveAttribute('href','/api/v1/download/windows');
   await expect(installerGuide).toContainText('Primeiro, vamos baixar seu aplicativo!');
   await expect(installerGuide.getByRole('link',{name:/Baixar Promo Iaulin para Windows/})).toHaveAttribute('href','/api/v1/download/windows');
   await installerGuide.getByRole('button',{name:/Já encontrei o arquivo/}).click();
@@ -38,11 +37,11 @@ test('cria conta, salva no servidor, sai, entra e abre o guia flutuante',async({
   await expect(installerGuide).toContainText('Toque em Ajustes');
   await installerGuide.getByRole('button',{name:/Já li o código/}).click();
   await expect(installerGuide).toContainText('Vincular minha conta online');
-  await installerGuide.getByRole('button',{name:'Entendi'}).click();
+  await installerGuide.getByRole('button',{name:'Concluir e aproveitar'}).click();
   await page.goto('http://127.0.0.1:3032/#sources');
   await page.getByRole('button',{name:'Ver passo a passo (5 min)'}).click();
   await expect(page.getByRole('dialog',{name:'Conecte o WhatsApp sem complicação'})).toBeVisible();
-  await page.getByRole('dialog').getByRole('button',{name:'Entendi'}).click();
+  await page.getByRole('dialog',{name:'Conecte o WhatsApp sem complicação'}).getByRole('button',{name:'Fechar'}).click();
   const pairing='https://only-a-test.trycloudflare.com/#pair='+ 'P'.repeat(43);
   await page.goto('http://127.0.0.1:3032/#worker-pair='+encodeURIComponent(pairing));
   const confirmation=page.getByRole('dialog',{name:'Vincular este computador?'});
