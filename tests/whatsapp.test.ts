@@ -166,7 +166,7 @@ describe('WhatsApp lifecycle without a real connection', () => {
     expect(mock.make).not.toHaveBeenCalled();
     await Promise.all([service.connect(), service.connect()]);
     expect(mock.make).toHaveBeenCalledTimes(1);
-    expect((await stat(authDir)).mode & 0o777).toBe(0o700);
+    if (process.platform !== 'win32') expect((await stat(authDir)).mode & 0o777).toBe(0o700);
     const options = mock.make.mock.calls[0][0];
     expect(options).toMatchObject({ printQRInTerminal: false, syncFullHistory: false, emitOwnEvents: false });
     expect(options.shouldSyncHistoryMessage()).toBe(false);
@@ -320,7 +320,7 @@ describe('WhatsApp lifecycle without a real connection', () => {
     // stop invalidates queued writes; persist a credential through a fresh connection instead.
     await service.connect();
     sockets.at(-1)!.ev.emit('creds.update', {});
-    await vi.waitFor(async () => expect((await stat(join(authDir, 'creds.json'))).mode & 0o777).toBe(0o600));
+    await vi.waitFor(async () => { const file = await stat(join(authDir, 'creds.json')); expect(file.isFile()).toBe(true); if (process.platform !== 'win32') expect(file.mode & 0o777).toBe(0o600); });
     expect(await readFile(join(authDir, 'creds.json'), 'utf8')).toContain('private');
   });
 
