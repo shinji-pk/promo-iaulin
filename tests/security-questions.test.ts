@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createCloudAuth } from '../apps/cloud/src/auth.ts';
 import { emptyAuthDocument, type AuthDocument } from '../apps/cloud/src/blob-auth-adapter.ts';
 import { JsonDocumentStore, StoreConflictError, type JsonBackend } from '../apps/cloud/src/blob-store.ts';
-import { createSecurityQuestionService, SECURITY_QUESTIONS, SecurityQuestionError } from '../apps/cloud/src/security-questions.ts';
+import { createSecurityQuestionService, SECURITY_QUESTIONS } from '../apps/cloud/src/security-questions.ts';
 
 type RecoveryDoc = {version:1;users:Record<string,{questions:Array<{id:string;hash:string}>;updatedAt:string}>;attempts:Record<string,{count:number;until:number}>};
 const secret='test-recovery-secret-longer-than-thirty-two-characters';

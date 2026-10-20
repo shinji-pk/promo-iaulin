@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { SECURITY_QUESTIONS } from '../../../packages/shared/src/security-questions.ts';
 import { Field } from './ui.tsx';
 
