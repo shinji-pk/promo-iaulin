@@ -39,6 +39,7 @@ export function createSecurityQuestionService(options: {
 } = {}) {
   const secret=options.secret??process.env.BETTER_AUTH_SECRET;
   if (!secret || secret.length<32) throw new Error('Serviço de recuperação indisponível.');
+  const verifiedSecret:string=secret;
   const authStore=options.authStore??createBlobJsonStore<AuthDocument>('accounts/auth-v1.json',()=>({version:1,tables:{}}));
   const recoveryStore=options.recoveryStore??createBlobJsonStore<RecoveryDocument>('accounts/security-questions-v1.json',initial,{maxBytes:2*1024*1024});
 
@@ -54,7 +55,7 @@ export function createSecurityQuestionService(options: {
     if(typeof credential?.password!=='string' || !(await verifyPassword({hash:credential.password,password:currentPassword}))){
       throw new SecurityQuestionError(401,'not_authorized','A senha atual não foi reconhecida.');
     }
-    const hashed=await Promise.all(questions.map(async q=>({id:q.id,hash:await hashPassword(protector(secret,q.id,q.answer))})));
+    const hashed=await Promise.all(questions.map(async q=>({id:q.id,hash:await hashPassword(protector(verifiedSecret,q.id,q.answer))})));
     await recoveryStore.transact(draft=>{
       draft.users[userId]={questions:hashed,updatedAt:new Date().toISOString()};
     });
@@ -69,7 +70,7 @@ export function createSecurityQuestionService(options: {
     const accountDoc=await authStore.read();
     const user=userFor(accountDoc,email);
     const userId=typeof user?.id==='string'?user.id:'';
-    const rateKey=indexFor(secret,email),now=Date.now();
+    const rateKey=indexFor(verifiedSecret,email),now=Date.now();
     // A globally shared, CAS-backed limiter blocks concurrent attempts, across serverless instances.
     await recoveryStore.transact(doc=>{
       const current=doc.attempts[rateKey];
@@ -86,7 +87,7 @@ export function createSecurityQuestionService(options: {
     if(ordered) {
       const results=await Promise.all(ordered.map(async q=>{
         const answer=byId.get(q.id);
-        return typeof answer==='string' && await verifyPassword({hash:q.hash,password:protector(secret,q.id,answer)});
+        return typeof answer==='string' && await verifyPassword({hash:q.hash,password:protector(verifiedSecret,q.id,answer)});
       }));
       matches=matches&&results.every(Boolean);
     }
