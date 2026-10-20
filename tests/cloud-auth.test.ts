@@ -85,6 +85,7 @@ describe('approved sign-in hosts',()=>{
   it('accepts only the two owned production hostnames and explicitly approved origins',()=>{
     expect(trustedAuthOrigins('https://promo-iaulin.vercel.app')).toContain('https://promo-iaulin-mkce.vercel.app');
     expect(trustedAuthOrigins('https://promo-iaulin-mkce.vercel.app')).toContain('https://promo-iaulin.vercel.app');
+    expect(trustedAuthOrigins('https://promo-iaulin-mkce.vercel.app')).toContain('https://iaulinbot.vercel.app');
     expect(trustedAuthOrigins('https://promo.test')).toEqual(['https://promo.test']);
     expect(trustedAuthOrigins('https://promo.test')).not.toContain('https://attacker.example');
   });

@@ -107,7 +107,7 @@ test('recupera a mesma conta pelas três perguntas, sem e-mail de confirmação'
   await page.getByLabel('Resposta 2').fill('PROFESSORA GENTIL');
   await page.getByLabel('Pergunta de segurança 3').selectOption('favorite_book');
   await page.getByLabel('Resposta 3').fill('o livro azul');
-  await page.getByLabel('Nova senha').fill(recovered);
+  await page.getByLabel('Nova senha',{exact:true}).fill(recovered);
   await page.getByLabel('Confirme sua nova senha').fill(recovered);
   await page.getByRole('button',{name:'Verificar respostas e trocar senha'}).click();
   await expect(page.getByText('Senha redefinida. Entre com sua nova senha.')).toBeVisible();

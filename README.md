@@ -45,7 +45,7 @@ As configurações e a sessão persistem entre reinicializações. **Fechar o si
 
 ## Contas e painel online
 
-Em **https://promo-iaulin.vercel.app**, use **Criar conta** ou **Entrar**. Nome, e-mail, preferências, simulações e o último estado sincronizado ficam no armazenamento privado do servidor, separados por usuário. Sair ou trocar de navegador não apaga esses dados. A conta não usa localStorage como banco.
+Em **https://iaulinbot.vercel.app**, use **Criar conta** ou **Entrar**. Este é o endereço recomendado para novos acessos; contas antigas de outro projeto Vercel não são migradas automaticamente. Nome, e-mail, preferências, simulações e o último estado sincronizado ficam no armazenamento privado do servidor, separados por usuário. Sair ou trocar de navegador não apaga esses dados. A conta não usa localStorage como banco.
 
 A senha tem pelo menos 12 caracteres; o painel permite alterá-la e sair. Envio de e-mail de recuperação e verificação de e-mail ainda não foram configurados. Guarde sua senha com cuidado.
 

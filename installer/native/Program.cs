@@ -285,7 +285,7 @@ internal sealed class ControlCenter : Form
             var pairingUrl = urlElement.GetString();
             if (!Uri.TryCreate(pairingUrl, UriKind.Absolute, out var url) || url.Scheme != Uri.UriSchemeHttps || !url.Fragment.StartsWith("#pair=", StringComparison.Ordinal))
                 throw new InvalidOperationException("O link de conexão é inválido. Gere outro.");
-            var siteLink = "https://promo-iaulin.vercel.app/#worker-pair=" + Uri.EscapeDataString(pairingUrl);
+            var siteLink = "https://iaulinbot.vercel.app/#worker-pair=" + Uri.EscapeDataString(pairingUrl);
             Process.Start(new ProcessStartInfo(siteLink) { UseShellExecute = true });
             status.Text = "Confirme o vínculo no site ✓";
             hint.Text = "Entre na sua conta, confira a solicitação e clique em Confirmar. Não é necessário copiar códigos ou usar Render.";

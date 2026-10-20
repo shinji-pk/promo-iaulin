@@ -23,7 +23,7 @@ async function sendEmail(to:string,subject:string,body:string):Promise<void> {
 /** Only exact approved frontends may authenticate or submit account changes. */
 export function trustedAuthOrigins(baseURL:string):string[] {
   const base=new URL(baseURL).origin;
-  const aliases=['https://promo-iaulin.vercel.app','https://promo-iaulin-mkce.vercel.app'];
+  const aliases=['https://promo-iaulin.vercel.app','https://promo-iaulin-mkce.vercel.app','https://iaulinbot.vercel.app'];
   const isPromo=aliases.includes(base);
   const extras=(process.env.BETTER_AUTH_ALLOWED_ORIGINS??'').split(',').map(item=>item.trim()).filter(Boolean).map(item=>{
     const url=new URL(item);
