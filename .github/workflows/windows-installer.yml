@@ -85,8 +85,8 @@ jobs:
       - name: Instalar compilador do instalador
         shell: pwsh
         run: |
-          $home = [Environment]::GetFolderPath('ProgramFilesX86')
-          $iscc = Join-Path $home 'Inno Setup 6\ISCC.exe'
+          $programFilesX86 = [Environment]::GetFolderPath('ProgramFilesX86')
+          $iscc = Join-Path $programFilesX86 'Inno Setup 6\ISCC.exe'
           if (!(Test-Path $iscc)) {
             choco install innosetup -y --no-progress
             if ($LASTEXITCODE -ne 0) { throw "Inno Setup nao disponivel" }
@@ -94,9 +94,9 @@ jobs:
       - name: Gerar executavel unico de instalacao
         shell: pwsh
         run: |
-          $home = [Environment]::GetFolderPath('ProgramFilesX86')
-          $iscc = Join-Path $home 'Inno Setup 6\ISCC.exe'
-          if (!(Test-Path $iscc)) { $iscc = Join-Path $home 'Inno Setup 7\ISCC.exe' }
+          $programFilesX86 = [Environment]::GetFolderPath('ProgramFilesX86')
+          $iscc = Join-Path $programFilesX86 'Inno Setup 6\ISCC.exe'
+          if (!(Test-Path $iscc)) { $iscc = Join-Path $programFilesX86 'Inno Setup 7\ISCC.exe' }
           if (!(Test-Path $iscc)) { throw "ISCC.exe nao encontrado" }
           & $iscc 'installer/PromoIaulin.iss'
           if ($LASTEXITCODE -ne 0) { throw "Falha na compilacao do instalador" }
