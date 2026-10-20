@@ -26,7 +26,7 @@ test('cria conta, salva no servidor, sai, entra e abre o guia flutuante',async({
   await page.getByRole('button',{name:'Ver como ativar'}).click();
   const installerGuide=page.getByRole('dialog',{name:'Conecte o WhatsApp sem complicação'});
   await expect(installerGuide).toBeVisible();
-  await expect(installerGuide.getByRole('link',{name:/Baixar programa para Windows/})).toHaveAttribute('href','https://github.com/shinji-pk/promo-iaulin/releases');
+  await expect(installerGuide.getByRole('link',{name:/Baixar programa para Windows/})).toHaveAttribute('href','https://github.com/shinji-pk/promo-iaulin/releases/download/desktop-preview-38/Promo-Iaulin-Setup.exe');
   await expect(installerGuide).toContainText('Vincular minha conta online');
   await installerGuide.getByRole('button',{name:'Entendi'}).click();
   await page.goto('http://127.0.0.1:3032/#sources');
