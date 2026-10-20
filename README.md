@@ -4,16 +4,24 @@ Seu espaço de curadoria de promoções: captar, entender, selecionar, revisar e
 
 O painel está em português e reúne fila, simulação, lojas, público, fontes, regras, identidade das mensagens, atividade e backup. As configurações do uso diário ficam na interface.
 
-## Começar no Windows
+## Instalar no Windows (experiência para usuários)
 
-1. Baixe o repositório e **extraia a pasta inteira** no computador.
-2. Abra **`INICIAR-PROMOBRIDGE.bat`** na pasta extraída. Na primeira vez, aguarde a preparação com internet.
-3. O painel abre em **http://localhost:3030**. Você pode fechar a aba do navegador: o bot continua operando enquanto o PromoBridge estiver em execução no computador.
-4. Siga o guia do painel. Comece em modo manual e use **Simular oferta** para conhecer o fluxo.
+1. Abra [**Releases do Promo Iaulin**](https://github.com/shinji-pk/promo-iaulin/releases) e selecione uma versão de teste disponível para Windows x64.
+2. Baixe **`Promo-Iaulin-Setup.exe`** e conclua o assistente de instalação.
+3. Abra **Promo Iaulin** no menu Iniciar ou pela área de trabalho. Não é necessário extrair ZIP, instalar Node.js, usar PowerShell ou abrir CMD.
+4. Clique **Conectar WhatsApp**, abra **Dispositivos conectados** no WhatsApp do celular e leia o QR Code exibido no painel.
 
-O iniciador prepara uma cópia portátil do **Node.js 24.19.0** dentro da pasta do aplicativo, conferida com o SHA-256 publicado em [nodejs.org](https://nodejs.org/download/release/v24.19.0/SHASUMS256.txt). Não exige instalação global do Node nem acesso de administrador. Nas próximas vezes, abra o mesmo arquivo; a preparação só é repetida quando necessário. Os atalhos antigos em `scripts/` continuam funcionando.
+O instalador inclui o mecanismo do app, o Node.js necessário e as dependências já preparadas. Não baixa nem compila componentes no PC do cliente. O programa tem janela e ícone próprio e pode ser minimizado para a área de notificações; para encerrar o bot, use **Encerrar Promo Iaulin** no menu do ícone perto do relógio. Fechar a aba do navegador não encerra o serviço.
 
-Não é necessário editar código, JSON, banco ou arquivos de configuração. O computador precisa ficar ligado para receber e publicar ofertas. Não execute duas cópias do aplicativo para a mesma sessão. Consulte [instalação e solução de problemas](docs/INSTALACAO.md).
+A compilação automática para Windows está em `.github/workflows/windows-installer.yml`. **As versões iniciais são prévias de teste, não lançamentos finais validados em todos os computadores.** Sem assinatura digital, o Windows SmartScreen poderá mostrar um aviso. Não é necessário desativar o antivírus. A assinatura Authenticode deve ser adicionada antes de uma distribuição comercial ampla.
+
+O aplicativo mantém banco de dados, sessões e credenciais sob **`%LOCALAPPDATA%\\Promo Iaulin\\data`**, separado dos arquivos instalados. Reinstalar ou desinstalar não apaga automaticamente essa pasta. Uma instalação antiga iniciada por ZIP guardava o banco na subpasta `data` da pasta extraída; migrações devem ser feitas com ambas as cópias fechadas e um backup prévio. Consulte o [guia de instalação](docs/INSTALACAO.md).
+
+**Por que existe aplicativo?** O recurso de ler e publicar mensagens de grupos utiliza uma conexão WhatsApp de longa duração, não um QR Code isolado. A versão atual executa essa conexão no computador. Um futuro serviço dedicado sempre ligado poderia gerar o QR diretamente no site, sem instalar software local, mas exige hospedagem persistente, monitoramento e migração de sessões; não funciona somente com as funções temporárias do deploy atual na Vercel.
+
+## Desenvolvedores
+
+O fluxo antigo com `INICIAR-PROMOBRIDGE.bat` e ZIP do código-fonte permanece como alternativa de desenvolvimento, não como instalação indicada a usuários finais. Para contribuir, siga as instruções de build e testes abaixo.
 
 ## Configurar pelo painel
 
