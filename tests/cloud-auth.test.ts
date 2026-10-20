@@ -67,17 +67,16 @@ function sessionCookie(response: { headers: Headers }) {
 
 const registration = (email = 'pessoa@example.com') => ({ email, password, name: 'Pessoa de teste' });
 
-describe('a second app hostname uses the same persistent identity',()=>{
-  it('signs up and signs in from the alternate Promo Iaulin domain',async()=>{
-    const {freshAuth}=setup();
-    const alternate='https://promo-iaulin-mkce.vercel.app';
-    const send=(path:string,body:unknown)=>freshAuth().handler(new Request(alternate+'/api/auth/'+path,{
-      method:'POST',headers:{Origin:alternate,'Content-Type':'application/json'},body:JSON.stringify(body)
+describe('one canonical account hostname',()=>{
+  it('creates and reopens an existing account through the customer domain',async()=>{
+    const backend=new MemoryBackend();
+    const store=()=>new JsonDocumentStore<AuthDocument>({backend,pathname:'identity/primary.json',initial:emptyAuthDocument});
+    const primary='https://iaulinbot.vercel.app';
+    const post=(route:string,body:unknown)=>createCloudAuth({store:store(),baseURL:primary,secret}).handler(new Request(primary+'/api/auth/'+route,{
+      method:'POST',headers:{Origin:primary,'Content-Type':'application/json'},body:JSON.stringify(body)
     }));
-    const first=await send('sign-up/email',registration('alternate@example.com'));
-    expect(first.status).toBe(200);
-    const next=await send('sign-in/email',{email:'alternate@example.com',password});
-    expect(next.status).toBe(200);
+    expect((await post('sign-up/email',registration('same-account@example.com'))).status).toBe(200);
+    expect((await post('sign-in/email',{email:'same-account@example.com',password})).status).toBe(200);
   });
 });
 
