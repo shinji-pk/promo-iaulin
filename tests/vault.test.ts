@@ -16,9 +16,12 @@ describe('cofre local AES-GCM',()=>{
     const encoded=readFileSync(join(path,'shopee.json'),'utf8');
     expect(encoded).not.toContain('segredo-local-muito-especifico');
     expect(encoded).not.toContain('123456');
-    expect(statSync(path).mode & 0o777).toBe(0o700);
-    expect(statSync(join(path,'key.bin')).mode & 0o777).toBe(0o600);
-    expect(statSync(join(path,'shopee.json')).mode & 0o777).toBe(0o600);
+    // Windows ACLs are not represented by POSIX mode bits; encryption is asserted below.
+    if (process.platform !== 'win32') {
+      expect(statSync(path).mode & 0o777).toBe(0o700);
+      expect(statSync(join(path,'key.bin')).mode & 0o777).toBe(0o600);
+      expect(statSync(join(path,'shopee.json')).mode & 0o777).toBe(0o600);
+    }
     // Decrypt independently of the implementation, including the platform-bound AAD.
     const envelope=JSON.parse(encoded);const key=readFileSync(join(path,'key.bin'));
     const decipher=createDecipheriv('aes-256-gcm',key,Buffer.from(envelope.iv,'base64'));
