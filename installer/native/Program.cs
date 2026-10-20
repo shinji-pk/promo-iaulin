@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Drawing;
+using System.Text;
 using System.Net.Http;
 using System.Text.Json;
 using System.Windows.Forms;
@@ -37,6 +38,7 @@ internal sealed class ControlCenter : Form
     private readonly ProgressBar progress;
     private readonly Button panelButton;
     private readonly Button whatsappButton;
+    private readonly Button siteButton;
     private readonly Button retryButton;
     private Process? worker;
     private bool ready;
@@ -50,9 +52,9 @@ internal sealed class ControlCenter : Form
     {
         Text = "Promo Iaulin | Meu WhatsApp";
         StartPosition = FormStartPosition.CenterScreen;
-        Size = new Size(580, 435);
-        MinimumSize = new Size(580, 435);
-        MaximumSize = new Size(580, 435);
+        Size = new Size(580, 495);
+        MinimumSize = new Size(580, 495);
+        MaximumSize = new Size(580, 495);
         BackColor = Color.FromArgb(248, 247, 244);
         Font = new Font("Segoe UI", 10);
         MaximizeBox = false;
@@ -107,19 +109,22 @@ internal sealed class ControlCenter : Form
         progress = new ProgressBar { Left = 39, Top = 265, Width = 497, Height = 8, Style = ProgressBarStyle.Marquee, MarqueeAnimationSpeed = 24 };
         panelButton = ActionButton("Abrir meu painel", 39, 303, 196, Color.FromArgb(51, 38, 59), Color.White);
         whatsappButton = ActionButton("Conectar WhatsApp", 248, 303, 224, Color.FromArgb(215, 227, 182), Color.FromArgb(51, 38, 59));
+        siteButton = ActionButton("Vincular minha conta online", 39, 357, 433, Color.White, Color.FromArgb(51, 38, 59));
         retryButton = ActionButton("Tentar novamente", 39, 303, 210, Color.FromArgb(51, 38, 59), Color.White);
         panelButton.Enabled = false;
         whatsappButton.Enabled = false;
+        siteButton.Enabled = false;
         retryButton.Visible = false;
         panelButton.Click += (_, _) => OpenPanel(false);
         whatsappButton.Click += (_, _) => OpenPanel(true);
+        siteButton.Click += async (_, _) => await LinkSiteAsync();
         retryButton.Click += (_, _) => StartWorker();
-        Controls.AddRange([status, hint, progress, panelButton, whatsappButton, retryButton]);
+        Controls.AddRange([status, hint, progress, panelButton, whatsappButton, siteButton, retryButton]);
 
         var footer = new Label
         {
             Text = "Seus dados e a sessão ficam no seu computador. Fechar esta janela minimiza o app.",
-            Left = 39, Top = 365, Width = 510, Height = 24,
+            Left = 39, Top = 422, Width = 510, Height = 24,
             Font = new Font("Segoe UI", 8), ForeColor = Color.FromArgb(110, 104, 116)
         };
         Controls.Add(footer);
@@ -152,6 +157,8 @@ internal sealed class ControlCenter : Form
         whatsappButton.Visible = true;
         panelButton.Enabled = false;
         whatsappButton.Enabled = false;
+        siteButton.Enabled = false;
+        siteButton.Visible = true;
         status.Text = "Preparando seu aplicativo…";
         hint.Text = "Abriremos o painel automaticamente quando tudo estiver pronto.";
         progress.Style = ProgressBarStyle.Marquee;
@@ -219,6 +226,7 @@ internal sealed class ControlCenter : Form
             hint.Text = "Clique em Conectar WhatsApp e leia o QR Code com seu celular. O Promo Iaulin permanece ativo próximo ao relógio.";
             panelButton.Enabled = true;
             whatsappButton.Enabled = true;
+            siteButton.Enabled = true;
             if (opening) OpenPanel(true);
             opening = false;
         }
@@ -247,6 +255,48 @@ internal sealed class ControlCenter : Form
         panelButton.Visible = false;
         whatsappButton.Visible = false;
         retryButton.Visible = true;
+        siteButton.Visible = false;
+    }
+
+    private async Task LinkSiteAsync()
+    {
+        if (!ready || !siteButton.Enabled) return;
+        siteButton.Enabled = false;
+        status.Text = "Preparando conexão segura com o site…";
+        hint.Text = "O Promo Iaulin está iniciando um acesso temporário seguro ao seu computador.";
+        try
+        {
+            using var network = new HttpClient { Timeout = TimeSpan.FromSeconds(115) };
+            using var sessionResponse = await network.GetAsync(PanelUrl + "api/v1/session");
+            sessionResponse.EnsureSuccessStatusCode();
+            using var session = JsonDocument.Parse(await sessionResponse.Content.ReadAsStringAsync());
+            var csrf = session.RootElement.GetProperty("csrfToken").GetString();
+            if (string.IsNullOrWhiteSpace(csrf)) throw new InvalidOperationException("A sessão local não respondeu corretamente.");
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, PanelUrl + "api/v1/remote/start");
+            request.Headers.TryAddWithoutValidation("Origin", "http://127.0.0.1:3030");
+            request.Headers.TryAddWithoutValidation("X-CSRF-Token", csrf);
+            request.Content = new StringContent("{\"mode\":\"temporary\"}", Encoding.UTF8, "application/json");
+            using var response = await network.SendAsync(request);
+            if (!response.IsSuccessStatusCode) throw new InvalidOperationException("Não conseguimos ativar o acesso remoto. Verifique a internet e tente novamente.");
+            using var result = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            if (!result.RootElement.TryGetProperty("pairing", out var pairing) || !pairing.TryGetProperty("url", out var urlElement))
+                throw new InvalidOperationException("O link temporário não ficou pronto. Tente novamente.");
+            var pairingUrl = urlElement.GetString();
+            if (!Uri.TryCreate(pairingUrl, UriKind.Absolute, out var url) || url.Scheme != Uri.UriSchemeHttps || !url.Fragment.StartsWith("#pair=", StringComparison.Ordinal))
+                throw new InvalidOperationException("O link de conexão é inválido. Gere outro.");
+            var siteLink = "https://promo-iaulin.vercel.app/#worker-pair=" + Uri.EscapeDataString(pairingUrl);
+            Process.Start(new ProcessStartInfo(siteLink) { UseShellExecute = true });
+            status.Text = "Confirme o vínculo no site ✓";
+            hint.Text = "Entre na sua conta, confira a solicitação e clique em Confirmar. Não é necessário copiar códigos ou usar Render.";
+        }
+        catch (Exception error)
+        {
+            status.Text = "Seu WhatsApp local continua funcionando";
+            hint.Text = "O vínculo com o site não foi concluído. Confira a internet e tente novamente.";
+            MessageBox.Show(error.Message, "Não foi possível vincular ao site", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+        finally { siteButton.Enabled = ready; }
     }
 
     private void OpenPanel(bool whatsApp)
