@@ -14,9 +14,23 @@ function downloadJson(data: unknown, filename: string) {
 }
 
 export function LocalSetupModal({ onClose }: { onClose: () => void }) {
-  return <Modal title="Seu WhatsApp, com tudo por perto" subtitle="A instalação no computador faz a conexão e mantém suas ofertas em funcionamento." onClose={onClose}><div className="feature-stack"><ol className="feature-guide-steps"><li>Abra a página de versões e baixe <b>Promo-Iaulin-Setup.exe</b>.</li><li>Conclua a instalação com a interface visual e abra <b>Promo Iaulin</b>. Não precisa extrair ZIP nem abrir CMD.</li><li>Em Fontes & conexões, conecte o WhatsApp pelo QR Code e escolha seus grupos.</li><li>Configure suas lojas, confira o primeiro produto e aprove uma publicação.</li></ol><div className="notice notice-subtle"><ShieldCheck size={17} /><p>O computador precisa ficar ligado e com o aplicativo aberto para receber e publicar. Suas contas são configuradas no painel local.</p></div><div className="feature-inline-actions"><a className="text-link" href="https://github.com/shinji-pk/promo-iaulin/releases" target="_blank" rel="noopener noreferrer">Baixar instalador para Windows (.exe)<Download size={14} /></a><a className="text-link" href="http://localhost:3030" target="_blank" rel="noopener noreferrer">Já instalei: abrir painel local<ExternalLink size={14} /></a><a className="text-link" href="https://github.com/shinji-pk/promo-iaulin/blob/main/docs/INSTALACAO.md" target="_blank" rel="noopener noreferrer">Ver guia de instalação<ExternalLink size={14} /></a></div></div><div className="modal-footer"><Button variant="secondary" onClick={onClose}>Fechar</Button></div></Modal>;
+  return <Modal title="Conecte o WhatsApp sem complicação" subtitle="Seu computador faz o trabalho. Não precisa criar conta na Render, instalar Node.js nem abrir CMD." onClose={onClose}>
+    <div className="feature-stack">
+      <ol className="feature-guide-steps">
+        <li><b>Baixe o instalador para Windows:</b> abra a página de versões e selecione o arquivo <b>Promo-Iaulin-Setup.exe</b> quando a versão estiver disponível.</li>
+        <li><b>Instale e abra Promo Iaulin.</b> O servidor local inicia sozinho e pode ficar minimizado próximo ao relógio do Windows.</li>
+        <li><b>Conecte seu WhatsApp:</b> clique em <b>Conectar WhatsApp</b> no programa. No celular, abra Dispositivos conectados → Conectar dispositivo e escaneie o QR Code.</li>
+        <li><b>Quer usar também pelo site?</b> No programa, clique em <b>Vincular minha conta online</b>, faça login no site e confirme a conexão. Sem copiar códigos ou criar servidor na Render.</li>
+      </ol>
+      <div className="feature-inline-actions">
+        <a className="button button-primary" href="https://github.com/shinji-pk/promo-iaulin/releases" target="_blank" rel="noopener noreferrer"><Download size={16}/> Baixar programa para Windows (.exe)</a>
+        <a className="text-link" href="http://127.0.0.1:3030/#sources" target="_blank" rel="noopener noreferrer">Já instalei: abrir painel local <ExternalLink size={14}/></a>
+      </div>
+      <div className="notice notice-subtle"><ShieldCheck size={17}/><p><b>Importante:</b> o programa precisa permanecer ativo no computador para receber e enviar ofertas. Fechar somente a aba do site não para o bot. A versão Windows ainda precisa ter sua compilação validada antes da distribuição.</p></div>
+    </div>
+    <div className="modal-footer"><Button variant="secondary" onClick={onClose}>Entendi</Button></div>
+  </Modal>;
 }
-
 export function LocalSetupButton() {
   const [open, setOpen] = useState(false);
   return <><Button variant="secondary" icon={ArrowRight} onClick={() => setOpen(true)}>Usar com meu WhatsApp</Button>{open && <LocalSetupModal onClose={() => setOpen(false)} />}</>;
