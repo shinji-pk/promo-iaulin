@@ -27,12 +27,13 @@ async function jsonRequest(path:string,body?:unknown,method=body===undefined?'GE
 
 // This runs once at module load rather than in a React StrictMode initializer.
 // The one-time token is erased from browser history before the login UI mounts.
-const desktopPairFromLink=(()=>{
+function readDesktopPairFromHash():string {
   const fragment=new URLSearchParams(location.hash.slice(1));
   const pair=fragment.get('worker-pair')??'';
   if(pair) history.replaceState(history.state,'',location.pathname+location.search+'#sources');
   return pair;
-})();
+}
+const desktopPairFromLink=readDesktopPairFromHash();
 
 export function AccountGate({children}:{children:ReactNode}){
   const [account,setAccount]=useState<Account|null|undefined>(undefined),[error,setError]=useState(''),[panel,setPanel]=useState(false),[screen,setScreen]=useState<'login'|'signup'|'recovery'|'reset'|'question-recovery'>(new URLSearchParams(location.search).has('token')?'reset':'login'),[busy,setBusy]=useState(false);
@@ -40,6 +41,16 @@ export function AccountGate({children}:{children:ReactNode}){
   // Recebe somente o vínculo temporário criado pelo aplicativo Windows (fragmento nunca é enviado como Referer).
   const [pendingDesktopPair,setPendingDesktopPair]=useState(desktopPairFromLink);
   const [pairBusy,setPairBusy]=useState(false),[pairError,setPairError]=useState('');
+  // Some browsers navigate to a pairing URL in the existing app tab.
+  // Detect same-document hash changes too, and remove the one-time secret from the URL immediately.
+  useEffect(()=>{
+    const incoming=()=>{
+      const pair=readDesktopPairFromHash();
+      if(pair){setPendingDesktopPair(pair);setPairError('');}
+    };
+    window.addEventListener('hashchange',incoming);
+    return()=>window.removeEventListener('hashchange',incoming);
+  },[]);
   const [recoveryReady,setRecoveryReady]=useState(false),[notice,setNotice]=useState('');
   useEffect(()=>{void fetch('/api/v1/account/capabilities').then(r=>r.json()).then(v=>setRecoveryReady(v.passwordRecovery===true)).catch(()=>undefined);},[]);
   const loadVersion=useRef(0);
