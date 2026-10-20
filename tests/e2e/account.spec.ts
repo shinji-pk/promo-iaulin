@@ -18,6 +18,7 @@ test('cria conta, salva no servidor, sai, entra e abre o guia flutuante',async({
   await page.getByLabel('Seu nome',{exact:true}).fill('Pessoa afiliada');
   await page.getByLabel('E-mail',{exact:true}).fill(email);
   await page.getByLabel('Senha',{exact:true}).fill(password);
+  await page.getByLabel('Confirmar senha',{exact:true}).fill(password);
   await page.getByRole('button',{name:'Criar minha conta'}).click();
   await expect(page.getByRole('heading',{name:'A sua voz'})).toBeVisible();
   await expect(page.getByText('Você está em uma demonstração.',{exact:true})).toHaveCount(0);
@@ -32,7 +33,7 @@ test('cria conta, salva no servidor, sai, entra e abre o guia flutuante',async({
   await expect(installerGuide).toContainText('Agora é só instalar');
   await installerGuide.getByRole('button',{name:/Já instalei/}).click();
   await expect(installerGuide).toContainText('Vamos abrir seu novo ajudante');
-  await installerGuide.getByRole('button',{name:/Abri o WhatsApp/}).click();
+  await installerGuide.getByRole('button',{name:/Já abri o programa/}).click();
   await installerGuide.getByRole('button',{name:/iPhone/}).click();
   await expect(installerGuide).toContainText('Toque em Ajustes');
   await installerGuide.getByRole('button',{name:/Já li o código/}).click();
