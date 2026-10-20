@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 
 const port=Number(process.env.PROMOBRIDGE_PORT ?? '3030');
 if (!Number.isInteger(port) || port<1 || port>65535) throw new Error('PROMOBRIDGE_PORT deve ser uma porta válida.');
-const app=createApp({port});
+const app=createApp({port, ...(process.env.PROMOBRIDGE_WEB_DIR ? {webDir:resolve(process.env.PROMOBRIDGE_WEB_DIR)} : {})});
 const server=app.listen(port,'127.0.0.1',() => {
   console.log(`PromoBridge disponível em http://127.0.0.1:${port}.`);
   if (existsSync(resolve('data/whatsapp-session/creds.json'))) {
