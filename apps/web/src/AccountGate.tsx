@@ -24,16 +24,20 @@ async function jsonRequest(path:string,body?:unknown,method=body===undefined?'GE
   return data;
 }
 
+// This runs once at module load rather than in a React StrictMode initializer.
+// The one-time token is erased from browser history before the login UI mounts.
+const desktopPairFromLink=(()=>{
+  const fragment=new URLSearchParams(location.hash.slice(1));
+  const pair=fragment.get('worker-pair')??'';
+  if(pair) history.replaceState(history.state,'',location.pathname+location.search+'#sources');
+  return pair;
+})();
+
 export function AccountGate({children}:{children:ReactNode}){
   const [account,setAccount]=useState<Account|null|undefined>(undefined),[error,setError]=useState(''),[panel,setPanel]=useState(false),[screen,setScreen]=useState<'login'|'signup'|'recovery'|'reset'|'question-recovery'>(new URLSearchParams(location.search).has('token')?'reset':'login'),[busy,setBusy]=useState(false);
   const [token]=useState(()=>{const url=new URL(location.href);const value=url.searchParams.get('token')??'';if(value){url.searchParams.delete('token');url.searchParams.delete('error');history.replaceState(history.state,'',url.pathname+url.search+url.hash);}return value;});
   // Recebe somente o vínculo temporário criado pelo aplicativo Windows (fragmento nunca é enviado como Referer).
-  const [pendingDesktopPair,setPendingDesktopPair]=useState(()=>{
-    const fragment=new URLSearchParams(location.hash.slice(1));
-    const pair=fragment.get('worker-pair')??'';
-    if(pair) history.replaceState(history.state,'',location.pathname+location.search+'#sources');
-    return pair;
-  });
+  const [pendingDesktopPair,setPendingDesktopPair]=useState(desktopPairFromLink);
   const [pairBusy,setPairBusy]=useState(false),[pairError,setPairError]=useState('');
   const [recoveryReady,setRecoveryReady]=useState(false),[notice,setNotice]=useState('');
   useEffect(()=>{void fetch('/api/v1/account/capabilities').then(r=>r.json()).then(v=>setRecoveryReady(v.passwordRecovery===true)).catch(()=>undefined);},[]);
