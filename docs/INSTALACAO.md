@@ -14,9 +14,9 @@ A versão para clientes é o instalador **Promo-Iaulin-Setup.exe**, disponível 
 
 ## Dados e privacidade
 
-- Os dados de uma instalação nova ficam em \`%LOCALAPPDATA%\Promo Iaulin\data\`.
-- Os executáveis ficam separados em \`%LOCALAPPDATA%\Programs\Promo Iaulin\`. Atualizar ou desinstalar não apaga os dados do usuário automaticamente.
-- Se já usou o ZIP antigo, seus dados continuam em \`data\` dentro da pasta antiga. Não descarte a pasta sem antes fazer backup. A cópia para a pasta nova deve ser feita **somente com todos os processos antigos e novos fechados**, e nunca se deve executar duas cópias com a mesma sessão WhatsApp.
+- Os dados de uma instalação nova ficam em `%LOCALAPPDATA%\Promo Iaulin\data`.
+- Os executáveis ficam separados em `%LOCALAPPDATA%\Programs\Promo Iaulin`. Atualizar ou desinstalar não apaga os dados do usuário automaticamente.
+- Se já usou o ZIP antigo, seus dados continuam em `data` dentro da pasta antiga. Não descarte a pasta sem antes fazer backup. A cópia para a pasta nova deve ser feita **somente com todos os processos antigos e novos fechados**, e nunca se deve executar duas cópias com a mesma sessão WhatsApp.
 - Não envie a pasta de sessão, o backup ou chaves de API a terceiros.
 - O instalador de teste ainda **não possui assinatura digital**. Por isso o SmartScreen pode avisar que o editor é desconhecido; isso não é uma prova de vírus nem uma confirmação de segurança. Confira origem e o hash SHA-256 publicado no build e mantenha o antivírus ativo. É recomendado assinar digitalmente o programa e obter reputação SmartScreen antes da distribuição comercial ampla.
 - O WhatsApp é conectado por meio de Baileys, uma integração não oficial. Pode haver limitações ou restrições aplicadas pelo próprio serviço. Prefira número separado.
@@ -29,9 +29,9 @@ O site hospedado na Vercel guarda a conta, as preferências e simulações. A le
 
 ## Para desenvolver e dar manutenção
 
-O fluxo antigo com ZIP, \`INICIAR-PROMOBRIDGE.bat\`, \`scripts/iniciar-windows.ps1\` e \`npm run check\` continua no repositório para desenvolvimento e manutenção, **não é o fluxo recomendado a clientes**.
+O fluxo antigo com ZIP, `INICIAR-PROMOBRIDGE.bat`, `scripts/iniciar-windows.ps1` e `npm run check` continua no repositório para desenvolvimento e manutenção, **não é o fluxo recomendado a clientes**.
 
-A automação de empacotamento fica em \`.github/workflows/windows-installer.yml\`. É executada em um runner Windows, prepara o Node.js 24, roda os testes, gera a arte, compila um lançador WinForms .NET autocontido, copia apenas os componentes de produção e compila o instalador com Inno Setup. O arquivo instalável é disponibilizado como artefato; em pushes para main, o workflow publica uma prévia nos Releases.
+A automação de empacotamento fica em `.github/workflows/windows-installer.yml`. É executada em um runner Windows, prepara o Node.js 24, roda os testes, gera a arte, compila um lançador WinForms .NET autocontido, copia apenas os componentes de produção e compila o instalador com Inno Setup. O arquivo instalável é disponibilizado como artefato; em pushes para main, o workflow publica uma prévia nos Releases.
 
 ### Verificações antes de aprovar um lançamento estável
 
@@ -47,4 +47,4 @@ A automação de empacotamento fica em \`.github/workflows/windows-installer.yml
 - **Programa não inicia:** feche cópias antigas do PromoBridge, especialmente o CMD do ZIP antigo, porque a porta 3030 é usada por apenas uma instância.
 - **Janela mostra falha de inicialização:** verifique a integridade da instalação, antivírus e disponibilidade da porta 3030. Use **Tentar novamente**.
 - **QR Code não aparece:** confira a conexão de internet e clique em **Conectar WhatsApp** no painel local.
-- **Quero abrir o painel:** com o Promo Iaulin em execução, abra \`http://127.0.0.1:3030/\` ou clique em **Abrir meu painel**.
+- **Quero abrir o painel:** com o Promo Iaulin em execução, abra `http://127.0.0.1:3030/` ou clique em **Abrir meu painel**.
