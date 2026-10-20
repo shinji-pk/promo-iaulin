@@ -62,8 +62,8 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
   app.put('/api/v1/account/profile',async(req,res)=>{
     const fields=z.object({
       name:z.string().trim().min(2).max(100),
-      username:z.string().trim().max(40).regex(/^[a-zA-Z0-9._-]*$/),
-      phone:z.string().trim().max(24).regex(/^[+0-9 ()-]*$/),
+      username:z.string().trim().max(40).regex(/^[a-zA-Z0-9._-]*$/).optional(),
+      phone:z.string().trim().max(24).regex(/^[+0-9 ()-]*$/).optional(),
       image:z.union([z.string().max(220000).regex(/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/),z.null()]).optional()
     }).strict().parse(req.body);
     const result=await auth().api.updateUser({headers:fromNodeHeaders(req.headers),body:fields});res.json(result);
