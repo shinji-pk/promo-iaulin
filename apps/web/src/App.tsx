@@ -167,6 +167,7 @@ function Simulator({ busy, onClose, onSimulate, onOpen }: { busy: boolean; onClo
 
 const onboardingSteps = ['Boas-vindas', 'Conectar WhatsApp', 'Escolher fontes', 'Definir destino', 'Lojas & afiliação', 'Sua audiência', 'Seu ritmo', 'Experimentar', 'Seu espaço está pronto'];
 function Onboarding({ snapshot, draft, onChange, onSave, busy, onClose, onConnect, onGroups, onCalibrate, onSimulate, onFinish }: SettingsProps & { onClose: () => void; onConnect: () => void; onGroups: () => void; onCalibrate: (platform: PlatformId, config: AffiliateConfig) => Promise<{ valid: boolean; reason: string }>; onSimulate: (text: string) => Promise<Offer[]>; onFinish: () => Promise<void> }) {
+  const account = useAccount();
   const [step, setStep] = useState(0);
   const [testText, setTestText] = useState(exampleTexts[0]);
   const [testResult, setTestResult] = useState<Offer[] | null>(null);
