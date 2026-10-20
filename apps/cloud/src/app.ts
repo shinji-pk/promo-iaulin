@@ -2,7 +2,7 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import { fromNodeHeaders, toNodeHandler } from 'better-auth/node';
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { z, ZodError } from 'zod';
-import { getCloudAuth, hasEmailProvider } from './auth.ts';
+import { getCloudAuth, hasEmailProvider, trustedAuthOrigins } from './auth.ts';
 import { createSecurityQuestionService, SecurityQuestionError, SECURITY_QUESTIONS } from './security-questions.ts';
 import { createBlobJsonStore, type JsonDocumentStore } from './blob-store.ts';
 import { openCookie, parsePairingUrl, requestWorker, sealCookie, type WorkerConnection } from './worker-proxy.ts';
@@ -31,7 +31,7 @@ async function saveSnapshot(store:JsonDocumentStore<AccountData>,state:AppSnapsh
   await store.transact(draft=>{draft.settings=parsed.settings;draft.offers=parsed.offers.slice(0,3000);draft.activity=parsed.activity.slice(0,300);draft.feedbackCount=parsed.feedbackCount;draft.syncedAt=new Date().toISOString();if(connection)draft.connection=connection;});
 }
 
-export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;storeFor?:(userId:string)=>JsonDocumentStore<AccountData>;requestWorker?:typeof requestWorker;secret?:string;baseURL?:string;managedWorker?:ManagedWorker|null}={}){
+export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;storeFor?:(userId:string)=>JsonDocumentStore<AccountData>;requestWorker?:typeof requestWorker;secret?:string;baseURL?:string;managedWorker?:ManagedWorker|null;recoveryService?:ReturnType<typeof createSecurityQuestionService>}={}){
   const auth=()=>options.auth??getCloudAuth();
   const storeFor=options.storeFor??accountStore;
   const proxy=options.requestWorker??requestWorker;
@@ -39,7 +39,9 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
   const managedWorker=()=>options.managedWorker!==undefined?options.managedWorker:managedWorkerFromEnv();
   const secret=()=>options.secret??process.env.BETTER_AUTH_SECRET!;
   const csrfFor=(sessionId:string)=>createHmac('sha256',secret()).update(`csrf:${sessionId}`).digest('base64url');
-  const validOrigin=(req:Request)=>req.get('origin')===new URL(options.baseURL??process.env.BETTER_AUTH_URL??'https://promo-iaulin.vercel.app').origin;
+  const allowedOrigins=()=>trustedAuthOrigins(options.baseURL??process.env.BETTER_AUTH_URL??'https://promo-iaulin.vercel.app');
+  const validOrigin=(req:Request)=>allowedOrigins().includes(req.get('origin')??'');
+  const recovery=()=>options.recoveryService??createSecurityQuestionService();
   const validCsrf=(req:Request,sessionId:string)=>{
     const expected=Buffer.from(csrfFor(sessionId)),given=Buffer.from(req.get('x-csrf-token')??'');
     return given.length===expected.length&&timingSafeEqual(given,expected);
@@ -55,7 +57,7 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
     try {
       const session=await auth().api.getSession({headers:fromNodeHeaders(req.headers)});
       if(!session){res.status(401).json({error:'Entre na sua conta para configurar a recuperação.'});return;}
-      const selected=await createSecurityQuestionService().getUser(session.user.id);
+      const selected=await recovery().getUser(session.user.id);
       res.json({options:SECURITY_QUESTIONS,selected,configured:selected.length===3});
     } catch {res.status(503).json({error:'Não foi possível carregar a recuperação agora.'});}
   });
@@ -66,7 +68,7 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
       if(!validOrigin(req)||!validCsrf(req,session.session.id)){res.status(403).json({error:'Recarregue a página antes de salvar.'});return;}
       if(!req.is('application/json')){res.status(415).json({error:'Envie dados JSON.'});return;}
       const parsed=z.object({currentPassword:z.string().min(1).max(128),questions:z.array(z.object({id:z.string().max(100),answer:z.string().max(120)}).strict()).length(3)}).strict().parse(req.body);
-      await createSecurityQuestionService().enroll(session.user.id,parsed.currentPassword,parsed.questions);
+      await recovery().enroll(session.user.id,parsed.currentPassword,parsed.questions);
       res.json({configured:true});
     } catch(error){
       if(error instanceof SecurityQuestionError){res.status(error.status).json({error:error.message});return;}
@@ -80,7 +82,7 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
       if(!req.is('application/json')){res.status(415).json({error:'Envie dados JSON.'});return;}
       const parsed=z.object({email:z.email().max(254),newPassword:z.string().min(12).max(128),confirmPassword:z.string().min(12).max(128),
         questions:z.array(z.object({id:z.string().max(100),answer:z.string().max(120)}).strict()).length(3)}).strict().parse(req.body);
-      await createSecurityQuestionService().reset(parsed.email,parsed.questions,parsed.newPassword,parsed.confirmPassword);
+      await recovery().reset(parsed.email,parsed.questions,parsed.newPassword,parsed.confirmPassword);
       res.json({reset:true});
     } catch(error){
       if(error instanceof SecurityQuestionError){res.status(error.status).json({error:error.message});return;}
@@ -100,8 +102,7 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
     res.locals.user=result.user;res.locals.session=result.session;res.locals.store=storeFor(result.user.id);
     const configured=managedWorker();res.locals.managed=isManagedOwner(configured,result.user.email)?configured:null;
     if(!['GET','HEAD','OPTIONS'].includes(req.method)){
-      const origin=req.get('origin');const expectedOrigin=new URL(options.baseURL??process.env.BETTER_AUTH_URL??'https://promo-iaulin.vercel.app').origin;
-      if(origin!==expectedOrigin){res.status(403).json({error:'Origem não autorizada.'});return;}
+      if(!validOrigin(req)){res.status(403).json({error:'Origem não autorizada.'});return;}
       const expected=Buffer.from(csrfFor(result.session.id)),given=Buffer.from(req.get('x-csrf-token')??'');
       if(given.length!==expected.length||!timingSafeEqual(given,expected)){res.status(403).json({error:'Recarregue o painel para renovar a sessão.'});return;}
       if(!req.is('application/json')){res.status(415).json({error:'Envie conteúdo JSON.'});return;}

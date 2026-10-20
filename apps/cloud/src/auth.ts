@@ -20,6 +20,20 @@ async function sendEmail(to:string,subject:string,body:string):Promise<void> {
   const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+process.env.RESEND_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({from:sender,to:[to],subject,text:body}),signal:AbortSignal.timeout(12000)});
   if (!response.ok) throw new Error('O serviço de e-mail recusou o envio.');
 }
+/** Only exact approved frontends may authenticate or submit account changes. */
+export function trustedAuthOrigins(baseURL:string):string[] {
+  const base=new URL(baseURL).origin;
+  const aliases=['https://promo-iaulin.vercel.app','https://promo-iaulin-mkce.vercel.app'];
+  const isPromo=aliases.includes(base);
+  const extras=(process.env.BETTER_AUTH_ALLOWED_ORIGINS??'').split(',').map(item=>item.trim()).filter(Boolean).map(item=>{
+    const url=new URL(item);
+    if(url.protocol!=='https:' || url.username || url.password || url.pathname!=='/' || url.search || url.hash)
+      throw new Error('Origem de autenticação adicional inválida.');
+    return url.origin;
+  });
+  return [...new Set([base,...(isPromo?aliases:[]),...extras])];
+}
+
 export interface CloudAuthOptions {
   store?: JsonDocumentStore<AuthDocument>;
   secret?: string;
@@ -51,7 +65,7 @@ export function createCloudAuth(options: CloudAuthOptions = {}) {
         await sendEmail(user.email,'Promo IAulin: recuperar senha','Defina uma nova senha pelo link (30 minutos): '+url);
       }
     },
-    trustedOrigins: [origin.origin],
+    trustedOrigins: trustedAuthOrigins(origin.origin),
     session: { expiresIn: 7 * 24 * 60 * 60, updateAge: 24 * 60 * 60, cookieCache: { enabled: false } },
     rateLimit: {
       enabled: true, storage: 'database', window: 60, max: 100,

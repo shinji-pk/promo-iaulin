@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createCloudAuth, getEmailSender, hasEmailProvider } from '../apps/cloud/src/auth.ts';
+import { createCloudAuth, getEmailSender, hasEmailProvider, trustedAuthOrigins } from '../apps/cloud/src/auth.ts';
 import { emptyAuthDocument, type AuthDocument } from '../apps/cloud/src/blob-auth-adapter.ts';
 import { JsonDocumentStore, StoreConflictError, type JsonBackend } from '../apps/cloud/src/blob-store.ts';
 
@@ -66,6 +66,15 @@ function sessionCookie(response: { headers: Headers }) {
 }
 
 const registration = (email = 'pessoa@example.com') => ({ email, password, name: 'Pessoa de teste' });
+
+describe('approved sign-in hosts',()=>{
+  it('accepts only the two owned production hostnames and explicitly approved origins',()=>{
+    expect(trustedAuthOrigins('https://promo-iaulin.vercel.app')).toContain('https://promo-iaulin-mkce.vercel.app');
+    expect(trustedAuthOrigins('https://promo-iaulin-mkce.vercel.app')).toContain('https://promo-iaulin.vercel.app');
+    expect(trustedAuthOrigins('https://promo.test')).toEqual(['https://promo.test']);
+    expect(trustedAuthOrigins('https://promo.test')).not.toContain('https://attacker.example');
+  });
+});
 
 describe('domain-independent email recovery preparation', () => {
   it('does not promise password recovery before a sending domain is configured', () => {

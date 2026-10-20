@@ -4,6 +4,7 @@ import type { AddressInfo, LookupFunction } from 'node:net';
 import type { RequestOptions } from 'node:https';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createCloudApp, initialData, type AccountData } from '../apps/cloud/src/app.ts';
+import { createSecurityQuestionService } from '../apps/cloud/src/security-questions.ts';
 import { createCloudAuth } from '../apps/cloud/src/auth.ts';
 import { emptyAuthDocument, type AuthDocument } from '../apps/cloud/src/blob-auth-adapter.ts';
 import { JsonDocumentStore, StoreConflictError, type JsonBackend } from '../apps/cloud/src/blob-store.ts';
@@ -50,7 +51,12 @@ describe('cloud account API with real Express, Better Auth and persistent isolat
     base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
     const authStore = new JsonDocumentStore<AuthDocument>({ backend, pathname: 'auth.json', initial: emptyAuthDocument, maxAttempts: 30 });
     const auth = createCloudAuth({ store: authStore, baseURL: base, secret });
-    server.on('request', createCloudApp({ auth, storeFor, requestWorker: proxy, baseURL: base, secret }));
+    const recoveryService=createSecurityQuestionService({
+      authStore,
+      recoveryStore:new JsonDocumentStore({backend,pathname:'security-recovery.json',initial:()=>({version:1 as const,users:{},attempts:{}})}),
+      secret
+    });
+    server.on('request', createCloudApp({ auth, storeFor, requestWorker: proxy, baseURL: base, secret, recoveryService }));
   }
   async function stop() {
     server.closeIdleConnections();
@@ -91,6 +97,23 @@ describe('cloud account API with real Express, Better Auth and persistent isolat
     await start();
   });
   afterEach(async () => { await stop(); vi.unstubAllEnvs(); });
+
+  it('lets a new account configure and use three questions without email delivery',async()=>{
+    const person=await register('questions@example.com');
+    const q=[{id:'first_school',answer:'Escola da minha infância'},{id:'favorite_teacher',answer:'Professora Teresa'},{id:'favorite_book',answer:'O meu livro favorito'}];
+    const saved=await api('/api/v1/account/security-questions',{identity:person,body:{currentPassword:password,questions:q}});
+    expect(saved.status).toBe(200);
+    const state=await api('/api/v1/account/security-questions',{identity:person});
+    expect(await state.json()).toMatchObject({configured:true,selected:q.map(x=>x.id)});
+    const future='Nova senha para esta conta 456!';
+    const reset=await api('/api/v1/account/recover-with-questions',{body:{
+      email:'QUESTIONS@example.com',questions:q.map(x=>({...x,answer:'  '+x.answer.toUpperCase()+'  '})),
+      newPassword:future,confirmPassword:future
+    }});
+    expect(reset.status).toBe(200);
+    expect((await api('/api/auth/sign-in/email',{body:{email:'questions@example.com',password}})).status).not.toBe(200);
+    expect((await api('/api/auth/sign-in/email',{body:{email:'questions@example.com',password:future}})).status).toBe(200);
+  });
 
   it('requires a real login and stores different preferences per account across server restarts', async () => {
     expect((await api('/api/v1/state')).status).toBe(401);
