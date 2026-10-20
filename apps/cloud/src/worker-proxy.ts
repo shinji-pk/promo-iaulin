@@ -38,7 +38,7 @@ export function openCookie(value:string,userId:string):string {
 }
 
 /** DNS is checked and pinned for every request. Redirects never receive the pairing code or cookie. */
-export async function requestWorker(origin:string,path:string,options:{method?:string;body?:unknown;cookie?:string;csrf?:string}={}):Promise<ProxyResponse> {
+export async function requestWorker(origin:string,path:string,options:{method?:string;body?:unknown;cookie?:string;csrf?:string;bearer?:string}={}):Promise<ProxyResponse> {
   const url=new URL(path,origin);
   if (url.origin!==origin || !url.pathname.startsWith('/api/v1/') || url.protocol!=='https:' || url.port || url.username || url.password) throw new Error('Endereço do aplicativo inválido.');
   const controller=new AbortController(), deadline=setTimeout(()=>controller.abort(),25000);
@@ -51,7 +51,7 @@ export async function requestWorker(origin:string,path:string,options:{method?:s
     if(body && body.length>20*1024*1024)throw new Error('Conteúdo maior que o limite permitido.');
     return await new Promise<ProxyResponse>((resolve,reject)=>{
       const req=request(url,{method:options.method??'GET',agent:false,rejectUnauthorized:true,lookup:pinned,signal:controller.signal,maxHeaderSize:16384,
-        headers:{accept:'application/json','accept-encoding':'identity',origin,...(options.cookie?{cookie:options.cookie}:{}),...(options.csrf?{'x-csrf-token':options.csrf}:{}),...(body?{'content-type':'application/json','content-length':String(body.length)}:{})}},response=>{
+        headers:{accept:'application/json','accept-encoding':'identity',origin,...(options.bearer?{authorization:`Bearer ${options.bearer}`}:{}),...(options.cookie?{cookie:options.cookie}:{}),...(options.csrf?{'x-csrf-token':options.csrf}:{}),...(body?{'content-type':'application/json','content-length':String(body.length)}:{})}},response=>{
           const chunks:Buffer[]=[];let length=0;
           response.on('data',(chunk:Buffer)=>{length+=chunk.length;if(length>20*1024*1024){response.destroy(new Error('Resposta do computador maior que o limite.'));return;}chunks.push(chunk);});
           response.on('error',reject);response.on('end',()=>resolve({status:response.statusCode??502,body:Buffer.concat(chunks),contentType:response.headers['content-type']??'application/json',cookies:response.headers['set-cookie']??[]}));

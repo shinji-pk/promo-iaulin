@@ -1,5 +1,5 @@
 import express, { type Express, type Request, type Response, type NextFunction } from 'express';
-import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import QRCode from 'qrcode';
@@ -32,6 +32,8 @@ export interface AppOptions {
   remoteAccess?: RemoteAccess;
   port?: number;
   mediaDirectory?: string;
+  /** Hosted mode: the site's server authenticates with this secret instead of a pairing code. */
+  cloudToken?: string;
 }
 class HttpError extends Error { constructor(readonly status:number,message:string) { super(message); } }
 const terminal = new Set(['published','publishing','uncertain','failed','rejected','duplicate','simulated']);
@@ -370,10 +372,33 @@ export function createApp(options:AppOptions={}):Express & {runtime:WorkerRuntim
   const app=Object.assign(express(),{runtime});
   const csrfToken=randomBytes(32).toString('hex');
   const mutationCounts=new Map<string,{start:number;count:number}>();
+  const cloudToken=options.cloudToken ?? process.env.PROMOBRIDGE_CLOUD_TOKEN ?? '';
+  if (cloudToken && cloudToken.length<32) throw new Error('PROMOBRIDGE_CLOUD_TOKEN precisa ter pelo menos 32 caracteres.');
+  const cloudDigest=cloudToken ? createHash('sha256').update(cloudToken).digest() : null;
+  /** Bearer secrets are never ambient credentials, so a match needs neither pairing nor CSRF. */
+  const cloudRequest=(request:Request):boolean => {
+    if (!cloudDigest) return false;
+    const match=/^Bearer ([A-Za-z0-9._~+/=-]{32,512})$/.exec(request.get('authorization') ?? '');
+    return Boolean(match && timingSafeEqual(createHash('sha256').update(match[1]).digest(),cloudDigest));
+  };
   app.disable('x-powered-by');
   app.set('trust proxy',false);
+  // Hosting platforms need an unauthenticated liveness probe that reveals nothing else.
+  if (cloudDigest) app.get('/healthz',(_request,response) => {response.set('Cache-Control','no-store').json({ok:true});});
   app.use((request,response,next) => {
     response.set({'X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'no-referrer','Cross-Origin-Resource-Policy':'same-origin','Cache-Control':'no-store'});
+    if (cloudRequest(request)) {
+      response.locals.managed=true;
+      if (!['GET','HEAD','OPTIONS'].includes(request.method)) {
+        const emptyDelete=request.method==='DELETE' && !request.get('transfer-encoding') && (!request.get('content-length') || request.get('content-length')==='0');
+        if (!emptyDelete && !request.is('application/json')) {response.status(415).json({error:'Envie conteúdo JSON.'});return;}
+        const time=Date.now(),count=mutationCounts.get('managed') ?? {start:time,count:0};
+        if (time-count.start>60000) {count.start=time;count.count=0;}
+        count.count++;mutationCounts.set('managed',count);
+        if (count.count>240) {response.status(429).json({error:'Muitas ações em sequência. Aguarde um minuto.'});return;}
+      }
+      next();return;
+    }
     const local=localRequest(request);
     const address=request.socket.remoteAddress;
     const loopback=!address || ['127.0.0.1','::1','::ffff:127.0.0.1'].includes(address);
@@ -400,6 +425,8 @@ export function createApp(options:AppOptions={}):Express & {runtime:WorkerRuntim
   app.use(express.json({limit:'20mb',strict:true}));
   const router=express.Router();
   const localOnly=(request:Request,_response:Response,next:NextFunction)=>{if (!localRequest(request)) {next(new HttpError(403,'Esta ação precisa ser feita no computador que executa o PromoBridge.'));return;}next();};
+  // Secrets may be typed on the computer itself or, in hosted mode, sent by the site's own server.
+  const ownerOnly=(request:Request,response:Response,next:NextFunction)=>{if (!response.locals.managed && !localRequest(request)) {next(new HttpError(403,'Esta ação precisa ser feita no computador que executa o PromoBridge.'));return;}next();};
   const id=(value:unknown)=>z.string().min(1).max(200).parse(value);
   const platform=(value:unknown)=>z.enum(platformIds).parse(value);
   const service=async<T>(operation:()=>T|Promise<T>):Promise<T>=>{try {return await operation();} catch (error) {if (error instanceof ZodError || error instanceof HttpError) throw error;throw new HttpError(400,error instanceof Error ? error.message.slice(0,2000) : 'Não foi possível concluir a configuração.');}};
@@ -411,11 +438,11 @@ export function createApp(options:AppOptions={}):Express & {runtime:WorkerRuntim
   router.get('/account',(_request,response)=>response.json({mode:'worker',persistence:'computer'}));
   router.get('/affiliates/guides',(_request,response)=>response.json(getIntegrationGuides()));
   router.get('/affiliates/credentials',(_request,response)=>response.json(runtime.affiliates.credentialStatuses()));
-  router.post('/affiliates/:platform/credentials',localOnly,async(request,response)=>{
+  router.post('/affiliates/:platform/credentials',ownerOnly,async(request,response)=>{
     const parsed=z.object({values:z.record(z.string().max(100),z.string().max(8192))}).strict().parse(request.body);
     response.json(await runtime.run(()=>service(()=>runtime.affiliates.saveCredentials(platform(request.params.platform),parsed.values))));
   });
-  router.delete('/affiliates/:platform/credentials',localOnly,async(request,response)=>{z.object({}).strict().parse(request.body ?? {});await runtime.run(()=>runtime.affiliates.removeCredentials(platform(request.params.platform)));response.json({ok:true});});
+  router.delete('/affiliates/:platform/credentials',ownerOnly,async(request,response)=>{z.object({}).strict().parse(request.body ?? {});await runtime.run(()=>runtime.affiliates.removeCredentials(platform(request.params.platform)));response.json({ok:true});});
   router.post('/affiliates/:platform/test',async(request,response)=>{
     const parsed=z.object({originalUrl:affiliateUrlSchema.optional()}).strict().parse(request.body);
     response.json(await runtime.run(()=>runtime.affiliates.testConnection(platform(request.params.platform),parsed)));

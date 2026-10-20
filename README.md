@@ -17,7 +17,7 @@ A compilação automática para Windows está em `.github/workflows/windows-inst
 
 O aplicativo mantém banco de dados, sessões e credenciais sob **`%LOCALAPPDATA%\\Promo Iaulin\\data`**, separado dos arquivos instalados. Reinstalar ou desinstalar não apaga automaticamente essa pasta. Uma instalação antiga iniciada por ZIP guardava o banco na subpasta `data` da pasta extraída; migrações devem ser feitas com ambas as cópias fechadas e um backup prévio. Consulte o [guia de instalação](docs/INSTALACAO.md).
 
-**Por que existe aplicativo?** O recurso de ler e publicar mensagens de grupos utiliza uma conexão WhatsApp de longa duração, não um QR Code isolado. A versão atual executa essa conexão no computador. Um futuro serviço dedicado sempre ligado poderia gerar o QR diretamente no site, sem instalar software local, mas exige hospedagem persistente, monitoramento e migração de sessões; não funciona somente com as funções temporárias do deploy atual na Vercel.
+**Dá para conectar só com o QR Code, sem instalar nada?** Sim. Ative uma vez o servidor do WhatsApp na nuvem e o QR Code aparece direto no site: veja [QR na nuvem](docs/QR-NA-NUVEM.md). Isso é necessário porque a conexão do WhatsApp é de longa duração e não funciona nas funções temporárias da Vercel. O aplicativo para Windows continua disponível como alternativa.
 
 ## Desenvolvedores
 

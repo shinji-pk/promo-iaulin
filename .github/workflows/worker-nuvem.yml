@@ -1,0 +1,43 @@
+name: Servidor do WhatsApp | Validação
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Dockerfile'
+      - 'render.yaml'
+      - 'apps/**'
+      - 'packages/**'
+      - 'tests/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/worker-nuvem.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run test:unit
+      - run: npm run test:integration
+      - run: npm run build
+      - name: Construir imagem do servidor
+        run: docker build -t promo-iaulin-whatsapp .
+      - name: Testar servidor em modo nuvem
+        run: |
+          TOKEN=$(head -c 33 /dev/urandom | base64 | tr -d '\n=+/')
+          docker run -d --name w -p 10000:10000 -e PROMOBRIDGE_CLOUD_TOKEN="$TOKEN" promo-iaulin-whatsapp
+          for i in $(seq 1 20); do curl -fsS localhost:10000/healthz && break || sleep 2; done
+          test "$(curl -s -o /dev/null -w '%{http_code}' localhost:10000/api/v1/state)" != 200
+          curl -fsS -H "Authorization: Bearer $TOKEN" localhost:10000/api/v1/state > /dev/null
+          docker logs w

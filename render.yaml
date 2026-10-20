@@ -1,0 +1,18 @@
+# Deploy de um clique do servidor do WhatsApp no Render.
+# Abra: https://render.com/deploy?repo=https://github.com/shinji-pk/promo-iaulin
+services:
+  - type: web
+    name: promo-iaulin-whatsapp
+    runtime: docker
+    plan: starter            # precisa ficar sempre ligado (plano gratuito "dorme" e derruba o WhatsApp)
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    autoDeploy: true
+    disk:
+      name: whatsapp-data    # guarda a sessão do WhatsApp para não pedir QR Code de novo
+      mountPath: /app/data
+      sizeGB: 1
+    envVars:
+      - key: PROMOBRIDGE_CLOUD_TOKEN
+        generateValue: true  # senha entre o site e o servidor; copie-a para a Vercel (MANAGED_WORKER_TOKEN)
