@@ -67,6 +67,20 @@ function sessionCookie(response: { headers: Headers }) {
 
 const registration = (email = 'pessoa@example.com') => ({ email, password, name: 'Pessoa de teste' });
 
+describe('a second app hostname uses the same persistent identity',()=>{
+  it('signs up and signs in from the alternate Promo Iaulin domain',async()=>{
+    const {freshAuth}=setup();
+    const alternate='https://promo-iaulin-mkce.vercel.app';
+    const send=(path:string,body:unknown)=>freshAuth().handler(new Request(alternate+'/api/auth/'+path,{
+      method:'POST',headers:{Origin:alternate,'Content-Type':'application/json'},body:JSON.stringify(body)
+    }));
+    const first=await send('sign-up/email',registration('alternate@example.com'));
+    expect(first.status).toBe(200);
+    const next=await send('sign-in/email',{email:'alternate@example.com',password});
+    expect(next.status).toBe(200);
+  });
+});
+
 describe('approved sign-in hosts',()=>{
   it('accepts only the two owned production hostnames and explicitly approved origins',()=>{
     expect(trustedAuthOrigins('https://promo-iaulin.vercel.app')).toContain('https://promo-iaulin-mkce.vercel.app');
