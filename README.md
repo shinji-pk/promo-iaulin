@@ -8,7 +8,7 @@ O painel está em português e reúne fila, simulação, lojas, público, fontes
 
 1. Baixe o repositório e **extraia a pasta inteira** no computador.
 2. Abra **`INICIAR-PROMOBRIDGE.bat`** na pasta extraída. Na primeira vez, aguarde a preparação com internet.
-3. O painel abre em **http://localhost:3030**. Mantenha a janela do aplicativo aberta enquanto estiver usando.
+3. O painel abre em **http://localhost:3030**. Você pode fechar a aba do navegador: o bot continua operando enquanto o PromoBridge estiver em execução no computador.
 4. Siga o guia do painel. Comece em modo manual e use **Simular oferta** para conhecer o fluxo.
 
 O iniciador prepara uma cópia portátil do **Node.js 24.19.0** dentro da pasta do aplicativo, conferida com o SHA-256 publicado em [nodejs.org](https://nodejs.org/download/release/v24.19.0/SHASUMS256.txt). Não exige instalação global do Node nem acesso de administrador. Nas próximas vezes, abra o mesmo arquivo; a preparação só é repetida quando necessário. Os atalhos antigos em `scripts/` continuam funcionando.
@@ -24,7 +24,7 @@ Não é necessário editar código, JSON, banco ou arquivos de configuração. O
 - **Mensagens:** escolha estilo, convite e assinatura. Confira a prévia de cada oferta.
 - **Configurações:** baixe/restaure backup e ajuste retenção.
 
-As configurações e a sessão persistem entre reinicializações. Ao abrir novamente o aplicativo, uma sessão salva é retomada automaticamente. Se ela tiver expirado, use **Conectar WhatsApp** no painel para obter um novo QR. A reconexão após quedas transitórias é automática e tem limite de tentativas.
+As configurações e a sessão persistem entre reinicializações. **Fechar o site ou desligar o computador não apaga os dados já salvos.** Para receber e publicar pelo WhatsApp, o computador precisa estar ligado com o processo PromoBridge funcionando; o navegador pode ser fechado. Enquanto o processo estiver parado, novas mensagens podem não ser capturadas. Ao abrir novamente o aplicativo, uma sessão salva é retomada automaticamente se ainda for válida. Se ela tiver expirado, use **Conectar WhatsApp** no painel para obter um novo QR. A reconexão após quedas transitórias é automática e tem limite de tentativas.
 
 ## O que esta versão faz
 
