@@ -49,3 +49,16 @@ Playwright precisa do Chromium instalado no ambiente de desenvolvimento. A opera
 As revisões remotas 1c15d6c e 246f05b corrigiram o checkout incompleto, entradas extrínsecas do lockfile que causavam EBADPLATFORM no Linux e o proxy herdado pelo preview estático. Essas correções foram integradas antes da versão 2.1. A presente versão mantém o preview sem proxy e usa dependências e o mesmo commit libsignal por tarball HTTPS, evitando exigir Git/SSH no iniciador portátil.
 
 A verificação pública detectou e corrigiu o carregamento de dependências TypeScript na Function e o ETag fraco produzido pela compressão Brotli de documentos. O backend agora entrega JavaScript compilado e solicita Accept-Encoding identity nas leituras privadas. Há regressão de CAS para documentos maiores que o limiar de compressão.
+
+## Conferência pública concluída
+
+Em 19/10/2026, às 21h03 de Brasília, as duas URLs responderam com a interface 2.1 e os arquivos JS/CSS idênticos ao build local:
+
+- https://promo-iaulin.vercel.app
+- https://promo-iaulin-mkce.vercel.app
+
+A implementação publicada é a revisão `8a10d050d2672cb36df27b8a03173af61042b8d1`. As duas publicações terminaram READY. Uma conta técnica confirmou cadastro, sessão autenticada, gravação privada de preferências, logout, recusa do cookie revogado, novo login e recuperação dos dados. O endereço antigo também autenticou a mesma conta e recuperou as mesmas preferências.
+
+O Chromium no site público confirmou login pela interface, recuperação da assinatura salva, guia flutuante e logout, sem erros JavaScript. Desktop e celular apresentaram campos de 16 px e ausência de rolagem horizontal nos cenários inspecionados. Não houve conexão nem envio real ao WhatsApp.
+
+O projeto principal está vinculado ao Blob e usa a identidade da plataforma. O segundo projeto existente usa o token autorizado do mesmo armazenamento, mantendo `BLOB_STORE_ID` vazio nele: o SDK prioriza OIDC quando encontra esse identificador e a identidade do projeto secundário não está vinculada ao armazenamento. Nenhuma credencial está registrada neste documento.
