@@ -22,7 +22,7 @@ export function RecoveryQuestionFields({selected=[]}:{selected?:string[]}) {
           {SECURITY_QUESTIONS.map(question=><option key={question.id} value={question.id} disabled={questions.some((id,i)=>i!==index&&id===question.id)}>{question.label}</option>)}
         </select>
       </Field>
-      <Field label={`Resposta ${index+1}`} hint="Mínimo de 6 caracteres. Maiúsculas e minúsculas são equivalentes.">
+      <Field label={`Resposta ${index+1}`} hint="Mínimo de 6 caracteres. Maiúsculas, minúsculas e acentos não fazem diferença.">
         <input name={`answer${index}`} type="password" minLength={6} maxLength={120} autoComplete="off" required/>
       </Field>
     </div>)}

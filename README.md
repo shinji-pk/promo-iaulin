@@ -47,7 +47,16 @@ As configurações e a sessão persistem entre reinicializações. **Fechar o si
 
 Em **https://iaulinbot.vercel.app**, use **Criar conta** ou **Entrar**. Este é o endereço recomendado para novos acessos; contas antigas de outro projeto Vercel não são migradas automaticamente. Nome, e-mail, preferências, simulações e o último estado sincronizado ficam no armazenamento privado do servidor, separados por usuário. Sair ou trocar de navegador não apaga esses dados. A conta não usa localStorage como banco.
 
-A senha tem pelo menos 12 caracteres; o painel permite alterá-la e sair. Envio de e-mail de recuperação e verificação de e-mail ainda não foram configurados. Guarde sua senha com cuidado.
+A senha tem pelo menos 12 caracteres; o painel permite alterá-la e sair.
+
+**Recuperar a senha sem e-mail.** Ao criar a conta, a pessoa digita a senha duas vezes, escolhe **3 perguntas de segurança** e recebe um arquivo **`.txt` com um código de recuperação**. Se esquecer a senha, em **Esqueci minha senha** ela usa um dos dois caminhos:
+
+- **Código de recuperação:** e-mail + o código do arquivo + nova senha. O código vale uma única vez; ao usá-lo, o sistema mostra outro para baixar.
+- **Três perguntas:** e-mail + as três respostas + nova senha. Maiúsculas, minúsculas, acentos e espaços extras não importam.
+
+As respostas e o código ficam guardados de forma permanente no armazenamento privado do servidor, mas **somente como impressão digital irreversível** (HMAC-SHA256 com a chave do servidor; as respostas ainda passam pelo hash de senha do Better Auth): nem a equipe consegue lê-los. Por isso o código só aparece uma vez. Quem perder o arquivo gera outro em **Minha conta → Meu código de recuperação** (exige a senha; o antigo deixa de valer). Qualquer recuperação bem-sucedida encerra todas as sessões abertas e troca o código. Limites: 3 tentativas por hora nas perguntas e 10 por hora no código, por e-mail. Verificação de e-mail e link por e-mail só funcionam se o envio de e-mails for configurado; a recuperação acima não depende disso.
+
+**Reset de contas (20/10/2026).** Todas as contas anteriores deixaram de ser lidas (o sistema passou a usar `accounts/auth-v2.json` e `accounts/security-questions-v2.json`); todos precisam criar a conta de novo, já com as perguntas e o código. Os arquivos antigos (`auth-v1.json` e as pastas `accounts/<id>/`) continuam intactos no Vercel Blob privado até alguém apagá-los.
 
 O computador continua executando a conexão WhatsApp e a fila persistente. Para controlá-lo pelo site: no painel local, abra **Fontes & conexões → Acessar pelo celular**, ative o acesso e copie o link de pareamento. No site, abra o avatar **Minha conta**, expanda **Passo a passo para conectar** e cole o link. Ele é válido por cinco minutos e consumido uma vez; o acesso de dispositivo dura oito horas. O túnel temporário muda ao reiniciar e não tem garantia de disponibilidade. Um túnel próprio pode ser configurado para endereço estável.
 

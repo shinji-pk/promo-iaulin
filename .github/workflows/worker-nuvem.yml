@@ -27,7 +27,10 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci --no-audit --no-fund
+      - run: npm run lint
       - run: npm run typecheck
+      - name: Testar contas e recuperação sem e-mail
+        run: npx vitest run tests/security-questions.test.ts tests/cloud-api.test.ts tests/cloud-auth.test.ts
       - run: npm run test:unit
       - run: npm run test:integration
       - run: npm run build

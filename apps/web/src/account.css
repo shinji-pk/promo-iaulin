@@ -9,3 +9,19 @@
 .signup-recovery-questions>p{font-size:14px;color:#6c5a66;line-height:1.6}
 .signup-recovery-questions .feature-stack{gap:12px}
 .signup-recovery-questions .field{margin:0}
+
+/* Recovery code: shown once after signup or recovery. Sits above every other layer, including dialogs. */
+.recovery-sheet-backdrop{position:fixed;inset:0;z-index:3000;display:grid;place-items:center;padding:16px;background:#2b1a2699;backdrop-filter:blur(3px);overflow-y:auto}
+.recovery-sheet{width:min(520px,100%);background:#fffdfb;border:1px solid #e4d9df;border-radius:20px;padding:28px 26px;box-shadow:0 18px 80px #36213540;display:flex;flex-direction:column;gap:16px;max-height:calc(100dvh - 32px);overflow-y:auto}
+.recovery-sheet:focus{outline:none}
+.recovery-sheet-icon{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;background:#f0e8ed;color:#4d2945}
+.recovery-sheet h2{font:400 26px/1.25 Georgia,serif;color:#422d3c}
+.recovery-sheet>p{font-size:15px;line-height:1.65;color:#65545f}
+.recovery-code{font:600 20px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.06em;text-align:center;word-break:break-all;background:#f9f5f8;border:1px dashed #b996aa;border-radius:12px;padding:16px 12px;color:#3d2437;user-select:all}
+.recovery-sheet-actions{display:flex;gap:10px;flex-wrap:wrap}
+.recovery-sheet-actions>.button{flex:1;min-width:160px;justify-content:center}
+.recovery-sheet-rules{margin:0;padding-left:20px;font-size:14px;line-height:1.7;color:#5f4f59}
+.recovery-sheet-confirm{display:flex;gap:10px;align-items:flex-start;font-size:15px;line-height:1.55;cursor:pointer}
+.recovery-sheet-confirm input{margin-top:3px}
+.recovery-sheet>.button{width:100%;justify-content:center}
+@media (max-width:480px){.recovery-sheet{padding:22px 18px}.recovery-code{font-size:17px}}

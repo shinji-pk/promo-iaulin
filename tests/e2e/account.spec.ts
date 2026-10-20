@@ -1,4 +1,25 @@
-import {test,expect} from '@playwright/test';
+import {test,expect,type Page} from '@playwright/test';
+import {readFileSync} from 'node:fs';
+
+/** The recovery-code sheet blocks the app until the person downloads or copies the code and confirms. */
+async function saveRecoveryCode(page:Page):Promise<string>{
+  const sheet=page.getByRole('dialog',{name:/código/i});
+  await expect(sheet).toBeVisible();
+  const code=(await sheet.getByTestId('recovery-code').innerText()).trim();
+  expect(code).toMatch(/^([2-9A-HJ-NP-Z]{5}-){4}[2-9A-HJ-NP-Z]{5}$/);
+  await expect(sheet.getByRole('button',{name:'Continuar'})).toBeDisabled();
+  const [download]=await Promise.all([page.waitForEvent('download'),sheet.getByRole('button',{name:'Baixar arquivo .txt'}).click()]);
+  expect(download.suggestedFilename()).toBe('promo-iaulin-codigo-de-recuperacao.txt');
+  const file=readFileSync(await download.path(),'utf8');
+  expect(file).toContain(code);
+  expect(file).toContain('Esqueci minha senha');
+  await expect(sheet.getByRole('button',{name:'Continuar'})).toBeDisabled();
+  await sheet.getByRole('checkbox').check();
+  await sheet.getByRole('button',{name:'Continuar'}).click();
+  await expect(sheet).toHaveCount(0);
+  return code;
+}
+
 
 test('o acesso de dispositivo usa pareamento sem abrir cadastro de conta na nuvem',async({page})=>{
   await page.route('**/api/v1/account',route=>route.fulfill({status:401,contentType:'application/json',body:JSON.stringify({code:'PAIRING_REQUIRED'})}));
@@ -26,6 +47,7 @@ test('cria conta, salva no servidor, sai, entra e abre o guia flutuante',async({
   await page.getByLabel('Pergunta de segurança 3').selectOption('favorite_book');
   await page.getByLabel('Resposta 3').fill('Meu livro predileto');
   await page.getByRole('button',{name:'Criar conta e proteger meu acesso'}).click();
+  await saveRecoveryCode(page);
   await expect(page.getByRole('heading',{name:'A sua voz'})).toBeVisible();
   await expect(page.getByText('Você está em uma demonstração.',{exact:true})).toHaveCount(0);
   // A pessoa usa o computador como servidor; a configuração da Render não deve ser exigida.
@@ -95,11 +117,13 @@ test('recupera a mesma conta pelas três perguntas, sem e-mail de confirmação'
   await page.getByLabel('Pergunta de segurança 3').selectOption('favorite_book');
   await page.getByLabel('Resposta 3').fill('O Livro Azul');
   await page.getByRole('button',{name:'Criar conta e proteger meu acesso'}).click();
+  await saveRecoveryCode(page);
   await expect(page.getByRole('heading',{name:/Um novo dia/})).toBeVisible();
   await page.getByRole('button',{name:'Minha conta',exact:true}).click();
   await page.getByRole('button',{name:'Sair da conta'}).click();
   await page.getByRole('button',{name:'Esqueci minha senha'}).click();
-  await expect(page.getByRole('heading',{name:'Recuperar com três perguntas'})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'Recuperar o acesso'})).toBeVisible();
+  await page.getByRole('tab',{name:'Três perguntas'}).click();
   await page.getByLabel('E-mail cadastrado').fill(email);
   await page.getByLabel('Pergunta de segurança 1').selectOption('first_school');
   await page.getByLabel('Resposta 1').fill('  MINHA ESCOLA DO BAIRRO ');
@@ -110,9 +134,56 @@ test('recupera a mesma conta pelas três perguntas, sem e-mail de confirmação'
   await page.getByLabel('Nova senha',{exact:true}).fill(recovered);
   await page.getByLabel('Confirme sua nova senha').fill(recovered);
   await page.getByRole('button',{name:'Verificar respostas e trocar senha'}).click();
+  await saveRecoveryCode(page);
   await expect(page.getByText('Senha redefinida. Entre com sua nova senha.')).toBeVisible();
   await page.getByLabel('E-mail',{exact:true}).fill(email);
   await page.getByLabel('Senha',{exact:true}).fill(recovered);
   await page.getByRole('button',{name:'Entrar na minha conta'}).click();
   await expect(page.getByRole('heading',{name:/Um novo dia/})).toBeVisible();
+});
+
+test('recupera a conta com o código do arquivo .txt, sem e-mail, e o código só vale uma vez',async({page},testInfo)=>{
+  const email=`codigo-${testInfo.project.name}@example.com`;
+  const initial='Minha senha inicial bem longa 111!';
+  const recovered='Minha senha por codigo bem longa 333!';
+  await page.goto('http://127.0.0.1:3032/#today');
+  await page.getByRole('tab',{name:'Criar conta'}).click();
+  await page.getByLabel('Seu nome',{exact:true}).fill('Pessoa com código');
+  await page.getByLabel('E-mail',{exact:true}).fill(email);
+  await page.getByLabel('Senha',{exact:true}).fill(initial);
+  await page.getByLabel('Confirmar senha',{exact:true}).fill(initial);
+  await page.getByLabel('Pergunta de segurança 1').selectOption('first_school');
+  await page.getByLabel('Resposta 1').fill('Minha Escola do Bairro');
+  await page.getByLabel('Pergunta de segurança 2').selectOption('favorite_teacher');
+  await page.getByLabel('Resposta 2').fill('Professora Gentil');
+  await page.getByLabel('Pergunta de segurança 3').selectOption('favorite_book');
+  await page.getByLabel('Resposta 3').fill('O Livro Azul');
+  await page.getByRole('button',{name:'Criar conta e proteger meu acesso'}).click();
+  const firstCode=await saveRecoveryCode(page);
+  await page.getByRole('button',{name:'Minha conta',exact:true}).click();
+  await page.getByRole('button',{name:'Sair da conta'}).click();
+  await page.getByRole('button',{name:'Esqueci minha senha'}).click();
+  await expect(page.getByRole('tab',{name:'Código de recuperação'})).toHaveAttribute('aria-selected','true');
+  await page.getByLabel('E-mail cadastrado').fill(email);
+  await page.getByLabel('Código de recuperação',{exact:true}).fill(firstCode.toLowerCase().replaceAll('-',''));
+  await page.getByLabel('Nova senha',{exact:true}).fill(recovered);
+  await page.getByLabel('Confirme sua nova senha').fill(recovered);
+  await page.getByRole('button',{name:'Usar código e trocar senha'}).click();
+  const secondCode=await saveRecoveryCode(page);
+  expect(secondCode).not.toBe(firstCode);
+  await expect(page.getByText('Senha redefinida. Entre com sua nova senha.')).toBeVisible();
+  await page.getByLabel('E-mail',{exact:true}).fill(email);
+  await page.getByLabel('Senha',{exact:true}).fill(recovered);
+  await page.getByRole('button',{name:'Entrar na minha conta'}).click();
+  await expect(page.getByRole('heading',{name:/Um novo dia/})).toBeVisible();
+  // The used code no longer works.
+  await page.getByRole('button',{name:'Minha conta',exact:true}).click();
+  await page.getByRole('button',{name:'Sair da conta'}).click();
+  await page.getByRole('button',{name:'Esqueci minha senha'}).click();
+  await page.getByLabel('E-mail cadastrado').fill(email);
+  await page.getByLabel('Código de recuperação',{exact:true}).fill(firstCode);
+  await page.getByLabel('Nova senha',{exact:true}).fill(initial);
+  await page.getByLabel('Confirme sua nova senha').fill(initial);
+  await page.getByRole('button',{name:'Usar código e trocar senha'}).click();
+  await expect(page.getByRole('alert').filter({hasText:'Não foi possível confirmar a recuperação'})).toBeVisible();
 });

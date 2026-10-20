@@ -103,16 +103,55 @@ describe('cloud account API with real Express, Better Auth and persistent isolat
     const q=[{id:'first_school',answer:'Escola da minha infância'},{id:'favorite_teacher',answer:'Professora Teresa'},{id:'favorite_book',answer:'O meu livro favorito'}];
     const saved=await api('/api/v1/account/security-questions',{identity:person,body:{currentPassword:password,questions:q}});
     expect(saved.status).toBe(200);
+    const savedBody=await saved.json() as {configured:boolean;recoveryCode?:string};
+    expect(savedBody.recoveryCode).toMatch(/^([2-9A-HJ-NP-Z]{5}-){4}[2-9A-HJ-NP-Z]{5}$/);
     const state=await api('/api/v1/account/security-questions',{identity:person});
-    expect(await state.json()).toMatchObject({configured:true,selected:q.map(x=>x.id)});
+    expect(await state.json()).toMatchObject({configured:true,selected:q.map(x=>x.id),hasRecoveryCode:true});
     const future='Nova senha para esta conta 456!';
     const reset=await api('/api/v1/account/recover-with-questions',{body:{
       email:'QUESTIONS@example.com',questions:q.map(x=>({...x,answer:'  '+x.answer.toUpperCase()+'  '})),
       newPassword:future,confirmPassword:future
     }});
     expect(reset.status).toBe(200);
+    const resetBody=await reset.json() as {reset:boolean;recoveryCode:string};
+    expect(resetBody.reset).toBe(true);
+    expect(resetBody.recoveryCode).not.toBe(savedBody.recoveryCode);
     expect((await api('/api/auth/sign-in/email',{body:{email:'questions@example.com',password}})).status).not.toBe(200);
     expect((await api('/api/auth/sign-in/email',{body:{email:'questions@example.com',password:future}})).status).toBe(200);
+  });
+
+  it('recovers an account with the downloaded code, with no email and no questions, and the code works once',async()=>{
+    const person=await register('codigo@example.com');
+    const q=[{id:'first_school',answer:'Escola da minha infância'},{id:'favorite_teacher',answer:'Professora Teresa'},{id:'favorite_book',answer:'O meu livro favorito'}];
+    const saved=await (await api('/api/v1/account/security-questions',{identity:person,body:{currentPassword:password,questions:q}})).json() as {recoveryCode:string};
+    const future='Senha nova por codigo 789!!';
+    // Anyone may call recovery (nobody is signed in) but it must come from the app's own origin.
+    expect((await api('/api/v1/account/recover-with-code',{body:{email:'codigo@example.com',code:saved.recoveryCode,newPassword:future,confirmPassword:future},headers:{Origin:'https://evil.example'}})).status).toBe(403);
+    const wrong=await api('/api/v1/account/recover-with-code',{body:{email:'codigo@example.com',code:'AAAAA-BBBBB-CCCCC-DDDDD-EEEEE',newPassword:future,confirmPassword:future}});
+    expect(wrong.status).toBe(400);
+    const ok=await api('/api/v1/account/recover-with-code',{body:{email:'CODIGO@example.com',code:saved.recoveryCode.toLowerCase(),newPassword:future,confirmPassword:future}});
+    expect(ok.status).toBe(200);
+    const body=await ok.json() as {reset:boolean;recoveryCode:string};
+    expect(body.recoveryCode).toMatch(/^([2-9A-HJ-NP-Z]{5}-){4}[2-9A-HJ-NP-Z]{5}$/);
+    expect((await api('/api/auth/sign-in/email',{body:{email:'codigo@example.com',password}})).status).not.toBe(200);
+    expect((await api('/api/auth/sign-in/email',{body:{email:'codigo@example.com',password:future}})).status).toBe(200);
+    const again=await api('/api/v1/account/recover-with-code',{body:{email:'codigo@example.com',code:saved.recoveryCode,newPassword:password,confirmPassword:password}});
+    expect(again.status).toBe(400);
+  });
+
+  it('lets a signed-in person replace the code, but only with their password and a valid session',async()=>{
+    const person=await register('trocar-codigo@example.com');
+    const q=[{id:'first_school',answer:'Escola da minha infância'},{id:'favorite_teacher',answer:'Professora Teresa'},{id:'favorite_book',answer:'O meu livro favorito'}];
+    const saved=await (await api('/api/v1/account/security-questions',{identity:person,body:{currentPassword:password,questions:q}})).json() as {recoveryCode:string};
+    expect((await api('/api/v1/account/recovery-code',{body:{currentPassword:password}})).status).toBe(401);
+    expect((await api('/api/v1/account/recovery-code',{identity:person,body:{currentPassword:'senha errada'}})).status).toBe(401);
+    const renewed=await api('/api/v1/account/recovery-code',{identity:person,body:{currentPassword:password}});
+    expect(renewed.status).toBe(200);
+    const fresh=await renewed.json() as {recoveryCode:string};
+    expect(fresh.recoveryCode).not.toBe(saved.recoveryCode);
+    const future='Senha apos trocar codigo 321!!';
+    expect((await api('/api/v1/account/recover-with-code',{body:{email:'trocar-codigo@example.com',code:saved.recoveryCode,newPassword:future,confirmPassword:future}})).status).toBe(400);
+    expect((await api('/api/v1/account/recover-with-code',{body:{email:'trocar-codigo@example.com',code:fresh.recoveryCode,newPassword:future,confirmPassword:future}})).status).toBe(200);
   });
 
   it('requires a real login and stores different preferences per account across server restarts', async () => {

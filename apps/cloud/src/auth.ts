@@ -1,5 +1,5 @@
 import { betterAuth } from 'better-auth';
-import { blobAuthAdapter, emptyAuthDocument, type AuthDocument } from './blob-auth-adapter.ts';
+import { AUTH_DOCUMENT_PATH, blobAuthAdapter, emptyAuthDocument, type AuthDocument } from './blob-auth-adapter.ts';
 import { createBlobJsonStore, type JsonDocumentStore } from './blob-store.ts';
 
 // A single verified domain can serve several apps without branding the sender as one app.
@@ -46,7 +46,7 @@ export function createCloudAuth(options: CloudAuthOptions = {}) {
   const baseURL = options.baseURL ?? process.env.BETTER_AUTH_URL ?? 'https://promo-iaulin.vercel.app';
   const origin = new URL(baseURL);
   if (origin.protocol !== 'https:' && origin.hostname !== 'localhost' && origin.hostname !== '127.0.0.1') throw new Error('O endereço de autenticação precisa usar HTTPS.');
-  const store = options.store ?? createBlobJsonStore('accounts/auth-v1.json', emptyAuthDocument, { maxBytes: 8 * 1024 * 1024 });
+  const store = options.store ?? createBlobJsonStore(AUTH_DOCUMENT_PATH, emptyAuthDocument, { maxBytes: 8 * 1024 * 1024 });
   const auth = betterAuth({
     appName: 'PromoBridge', baseURL: origin.origin, secret,
     database: blobAuthAdapter(store),

@@ -1,5 +1,12 @@
 # Alterações
 
+## Recuperação de conta sem e-mail
+
+- Cadastro com senha digitada duas vezes e 3 perguntas de segurança; respostas ignoram maiúsculas, minúsculas e acentos.
+- Código de recuperação de 125 bits entregue em arquivo `.txt` no cadastro: uso único, guardado só como hash, trocado a cada recuperação e renovável em Minha conta.
+- Novas rotas: `POST /api/v1/account/recover-with-code` e `POST /api/v1/account/recovery-code`; `recover-with-questions` passa a devolver o novo código.
+- Reset de todas as contas anteriores (novos arquivos `auth-v2.json` e `security-questions-v2.json`; os antigos não são apagados).
+
 ## 2.0.0
 
 - Monorepo TypeScript strict com painel React, worker persistente e contratos compartilhados.

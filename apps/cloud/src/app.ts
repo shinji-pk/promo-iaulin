@@ -57,8 +57,8 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
     try {
       const session=await auth().api.getSession({headers:fromNodeHeaders(req.headers)});
       if(!session){res.status(401).json({error:'Entre na sua conta para configurar a recuperação.'});return;}
-      const selected=await recovery().getUser(session.user.id);
-      res.json({options:SECURITY_QUESTIONS,selected,configured:selected.length===3});
+      const state=await recovery().status(session.user.id);
+      res.json({options:SECURITY_QUESTIONS,selected:state.selected,configured:state.selected.length===3,hasRecoveryCode:state.hasCode,recoveryCodeCreatedAt:state.codeCreatedAt});
     } catch {res.status(503).json({error:'Não foi possível carregar a recuperação agora.'});}
   });
   app.post('/api/v1/account/security-questions',async(req,res)=>{
@@ -68,8 +68,9 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
       if(!validOrigin(req)||!validCsrf(req,session.session.id)){res.status(403).json({error:'Recarregue a página antes de salvar.'});return;}
       if(!req.is('application/json')){res.status(415).json({error:'Envie dados JSON.'});return;}
       const parsed=z.object({currentPassword:z.string().min(1).max(128),questions:z.array(z.object({id:z.string().max(100),answer:z.string().max(120)}).strict()).length(3)}).strict().parse(req.body);
-      await recovery().enroll(session.user.id,parsed.currentPassword,parsed.questions);
-      res.json({configured:true});
+      const saved=await recovery().enroll(session.user.id,parsed.currentPassword,parsed.questions);
+      // The recovery code is shown once, here. Only a one-way verifier is stored.
+      res.json({configured:true,...(saved.recoveryCode?{recoveryCode:saved.recoveryCode}:{})});
     } catch(error){
       if(error instanceof SecurityQuestionError){res.status(error.status).json({error:error.message});return;}
       if(error instanceof ZodError){res.status(400).json({error:'Confira as três perguntas e sua senha atual.'});return;}
@@ -82,11 +83,38 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
       if(!req.is('application/json')){res.status(415).json({error:'Envie dados JSON.'});return;}
       const parsed=z.object({email:z.email().max(254),newPassword:z.string().min(12).max(128),confirmPassword:z.string().min(12).max(128),
         questions:z.array(z.object({id:z.string().max(100),answer:z.string().max(120)}).strict()).length(3)}).strict().parse(req.body);
-      await recovery().reset(parsed.email,parsed.questions,parsed.newPassword,parsed.confirmPassword);
-      res.json({reset:true});
+      const done=await recovery().reset(parsed.email,parsed.questions,parsed.newPassword,parsed.confirmPassword);
+      res.json({reset:true,recoveryCode:done.recoveryCode});
     } catch(error){
       if(error instanceof SecurityQuestionError){res.status(error.status).json({error:error.message});return;}
       if(error instanceof ZodError){res.status(400).json({error:'Confira seu e-mail, as três respostas e a senha repetida.'});return;}
+      res.status(503).json({error:'Não foi possível concluir a recuperação agora.'});
+    }
+  });
+  app.post('/api/v1/account/recovery-code',async(req,res)=>{
+    try {
+      const session=await auth().api.getSession({headers:fromNodeHeaders(req.headers)});
+      if(!session){res.status(401).json({error:'Entre na sua conta para gerar o código.'});return;}
+      if(!validOrigin(req)||!validCsrf(req,session.session.id)){res.status(403).json({error:'Recarregue a página antes de gerar o código.'});return;}
+      if(!req.is('application/json')){res.status(415).json({error:'Envie dados JSON.'});return;}
+      const parsed=z.object({currentPassword:z.string().min(1).max(128)}).strict().parse(req.body);
+      res.json(await recovery().regenerateCode(session.user.id,parsed.currentPassword));
+    } catch(error){
+      if(error instanceof SecurityQuestionError){res.status(error.status).json({error:error.message});return;}
+      if(error instanceof ZodError){res.status(400).json({error:'Confirme sua senha atual.'});return;}
+      res.status(503).json({error:'Não foi possível gerar o código agora.'});
+    }
+  });
+  app.post('/api/v1/account/recover-with-code',async(req,res)=>{
+    try {
+      if(!validOrigin(req)){res.status(403).json({error:'Origem não autorizada.'});return;}
+      if(!req.is('application/json')){res.status(415).json({error:'Envie dados JSON.'});return;}
+      const parsed=z.object({email:z.email().max(254),code:z.string().min(1).max(80),newPassword:z.string().min(12).max(128),confirmPassword:z.string().min(12).max(128)}).strict().parse(req.body);
+      const done=await recovery().resetWithCode(parsed.email,parsed.code,parsed.newPassword,parsed.confirmPassword);
+      res.json({reset:true,recoveryCode:done.recoveryCode});
+    } catch(error){
+      if(error instanceof SecurityQuestionError){res.status(error.status).json({error:error.message});return;}
+      if(error instanceof ZodError){res.status(400).json({error:'Confira seu e-mail, o código e a senha repetida.'});return;}
       res.status(503).json({error:'Não foi possível concluir a recuperação agora.'});
     }
   });
