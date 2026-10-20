@@ -3,14 +3,10 @@ on:
   push:
     branches: [main]
     paths:
+      # Installers are release builds, not a new build for every account/backend change.
+      # Use Actions > Run workflow to build the latest code whenever you are ready.
       - '.github/workflows/windows-installer.yml'
       - 'installer/**'
-      - 'apps/**'
-      - 'packages/**'
-      - 'tests/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'tsconfig*.json'
   workflow_dispatch:
 concurrency:
   group: promo-iaulin-windows-${{ github.ref }}
