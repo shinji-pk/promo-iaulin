@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight, CalendarClock, Check, ChevronDown, ExternalLink, Link2, LoaderCircle, Pencil, Plus, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
+import { ArrowRight, CalendarClock, Check, ChevronDown, Download, ExternalLink, Link2, LoaderCircle, Pencil, Plus, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
 import { categoryIds, categoryNames, platformNames, type CategoryId, type Offer, type PlatformId } from '../../../packages/shared/src/index.ts';
 import type { ApprovedLink, CredentialStatus, IntegrationGuide, SetupStatus } from '../../../packages/shared/src/features.ts';
 import { api, isDemonstration } from './api.ts';
