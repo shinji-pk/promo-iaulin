@@ -3,6 +3,7 @@ import { fromNodeHeaders, toNodeHandler } from 'better-auth/node';
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { z, ZodError } from 'zod';
 import { getCloudAuth, hasEmailProvider } from './auth.ts';
+import { createSecurityQuestionService, SecurityQuestionError, SECURITY_QUESTIONS } from './security-questions.ts';
 import { createBlobJsonStore, type JsonDocumentStore } from './blob-store.ts';
 import { openCookie, parsePairingUrl, requestWorker, sealCookie, type WorkerConnection } from './worker-proxy.ts';
 import { isManagedOwner, managedWorkerFromEnv, type ManagedWorker } from './managed-worker.ts';
@@ -43,6 +44,39 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
   app.all('/api/auth/{*splat}',(req,res)=>toNodeHandler(auth())(req,res));
   app.use(express.json({limit:'20mb',strict:true}));
   app.get('/api/v1/account/capabilities',(_req,res)=>res.json({passwordRecovery:hasEmailProvider(),emailChange:hasEmailProvider()}));
+  app.get('/api/v1/account/security-questions',async(req,res)=>{
+    try {
+      const session=await auth().api.getSession({headers:fromNodeHeaders(req.headers)});
+      if(!session){res.status(401).json({error:'Entre na sua conta para configurar a recuperação.'});return;}
+      const selected=await createSecurityQuestionService().getUser(session.user.id);
+      res.json({options:SECURITY_QUESTIONS,selected,configured:selected.length===3});
+    } catch {res.status(503).json({error:'Não foi possível carregar a recuperação agora.'});}
+  });
+  app.post('/api/v1/account/security-questions',async(req,res)=>{
+    try {
+      const session=await auth().api.getSession({headers:fromNodeHeaders(req.headers)});
+      if(!session){res.status(401).json({error:'Entre na sua conta para configurar a recuperação.'});return;}
+      const parsed=z.object({currentPassword:z.string().min(1).max(128),questions:z.array(z.object({id:z.string().max(100),answer:z.string().max(120)}).strict()).length(3)}).strict().parse(req.body);
+      await createSecurityQuestionService().enroll(session.user.id,parsed.currentPassword,parsed.questions);
+      res.json({configured:true});
+    } catch(error){
+      if(error instanceof SecurityQuestionError){res.status(error.status).json({error:error.message});return;}
+      if(error instanceof ZodError){res.status(400).json({error:'Confira as três perguntas e sua senha atual.'});return;}
+      res.status(503).json({error:'Não foi possível salvar suas perguntas agora.'});
+    }
+  });
+  app.post('/api/v1/account/recover-with-questions',async(req,res)=>{
+    try {
+      const parsed=z.object({email:z.email().max(254),newPassword:z.string().min(12).max(128),confirmPassword:z.string().min(12).max(128),
+        questions:z.array(z.object({id:z.string().max(100),answer:z.string().max(120)}).strict()).length(3)}).strict().parse(req.body);
+      await createSecurityQuestionService().reset(parsed.email,parsed.questions,parsed.newPassword,parsed.confirmPassword);
+      res.json({reset:true});
+    } catch(error){
+      if(error instanceof SecurityQuestionError){res.status(error.status).json({error:error.message});return;}
+      if(error instanceof ZodError){res.status(400).json({error:'Confira seu e-mail, as três respostas e a senha repetida.'});return;}
+      res.status(503).json({error:'Não foi possível concluir a recuperação agora.'});
+    }
+  });
   app.get('/api/v1/account',async(req,res)=>{
     const result=await auth().api.getSession({headers:fromNodeHeaders(req.headers)});
     const data=result?await storeFor(result.user.id).read():null;
