@@ -19,7 +19,13 @@ test('cria conta, salva no servidor, sai, entra e abre o guia flutuante',async({
   await page.getByLabel('E-mail',{exact:true}).fill(email);
   await page.getByLabel('Senha',{exact:true}).fill(password);
   await page.getByLabel('Confirmar senha',{exact:true}).fill(password);
-  await page.getByRole('button',{name:'Criar minha conta'}).click();
+  await page.getByLabel('Pergunta de segurança 1').selectOption('first_school');
+  await page.getByLabel('Resposta 1').fill('A minha escola querida');
+  await page.getByLabel('Pergunta de segurança 2').selectOption('favorite_teacher');
+  await page.getByLabel('Resposta 2').fill('Professora especial');
+  await page.getByLabel('Pergunta de segurança 3').selectOption('favorite_book');
+  await page.getByLabel('Resposta 3').fill('Meu livro predileto');
+  await page.getByRole('button',{name:'Criar conta e proteger meu acesso'}).click();
   await expect(page.getByRole('heading',{name:'A sua voz'})).toBeVisible();
   await expect(page.getByText('Você está em uma demonstração.',{exact:true})).toHaveCount(0);
   // A pessoa usa o computador como servidor; a configuração da Render não deve ser exigida.

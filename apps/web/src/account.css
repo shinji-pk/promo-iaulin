@@ -2,3 +2,10 @@
 @media(max-width:800px){.account-screen{grid-template-columns:1fr;padding:30px 20px 45px;gap:28px;max-width:540px}.account-brand{margin-bottom:30px}.account-welcome h1{font-size:40px;margin:16px 0}.account-welcome>p{font-size:16px}.account-promise{font-size:14px;margin-top:20px}.account-login{padding:26px 22px}.floating-guide{bottom:16px;right:16px}.guide-launcher{font-size:14px;min-height:48px;padding:11px 15px}.guide-panel{bottom:62px}.guide-panel>header{padding:20px 18px 15px}.guide-content{padding:0 18px 20px}.guide-tabs>button{font-size:12px}}
 
 .account-plain-link{display:inline-block;background:none;border:0;padding:12px 0;color:#75405b;text-decoration:underline;cursor:pointer;font-size:14px}.account-photo-editor{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.account-photo-editor img{height:58px;width:58px;border-radius:50%;object-fit:cover}.account-photo-editor label{flex:1;min-width:170px;font-size:14px}.account-photo-editor input{display:block;max-width:100%;margin-top:8px}
+
+/* The recovery choices are part of signup, never buried in developer settings. */
+.signup-recovery-questions{border:1px solid #e1d2db;background:#f9f5f8;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.signup-recovery-questions>b{font-size:16px;color:#57384c}
+.signup-recovery-questions>p{font-size:14px;color:#6c5a66;line-height:1.6}
+.signup-recovery-questions .feature-stack{gap:12px}
+.signup-recovery-questions .field{margin:0}
