@@ -21,6 +21,24 @@ test('cria conta, salva no servidor, sai, entra e abre o guia flutuante',async({
   await page.getByRole('button',{name:'Criar minha conta'}).click();
   await expect(page.getByRole('heading',{name:'A sua voz'})).toBeVisible();
   await expect(page.getByText('Você está em uma demonstração.',{exact:true})).toHaveCount(0);
+  // A pessoa usa o computador como servidor; a configuração da Render não deve ser exigida.
+  await page.goto('http://127.0.0.1:3032/#today');
+  await page.getByRole('button',{name:'Ver como ativar'}).click();
+  const installerGuide=page.getByRole('dialog',{name:'Conecte o WhatsApp sem complicação'});
+  await expect(installerGuide).toBeVisible();
+  await expect(installerGuide.getByRole('link',{name:/Baixar programa para Windows/})).toHaveAttribute('href',/github.com\\/shinji-pk\\/promo-iaulin\\/releases/);
+  await expect(installerGuide).toContainText('Vincular minha conta online');
+  await installerGuide.getByRole('button',{name:'Entendi'}).click();
+  await page.goto('http://127.0.0.1:3032/#sources');
+  await page.getByRole('button',{name:'Ver passo a passo (5 min)'}).click();
+  await expect(page.getByRole('dialog',{name:'Conecte o WhatsApp sem complicação'})).toBeVisible();
+  await page.getByRole('dialog').getByRole('button',{name:'Entendi'}).click();
+  const pairing='https://only-a-test.trycloudflare.com/#pair='+ 'P'.repeat(43);
+  await page.goto('http://127.0.0.1:3032/#worker-pair='+encodeURIComponent(pairing));
+  const confirmation=page.getByRole('dialog',{name:'Vincular este computador?'});
+  await expect(confirmation).toBeVisible();
+  expect(page.url()).not.toContain('only-a-test');
+  await confirmation.getByRole('button',{name:'Cancelar'}).click();
   const signature=`Grupo de vendas ${testInfo.project.name}`;
   await page.getByLabel('Assinatura das mensagens').fill(signature);
   await page.getByRole('button',{name:'Salvar preferências',exact:true}).click();
