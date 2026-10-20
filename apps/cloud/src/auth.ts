@@ -2,6 +2,12 @@ import { betterAuth } from 'better-auth';
 import { blobAuthAdapter, emptyAuthDocument, type AuthDocument } from './blob-auth-adapter.ts';
 import { createBlobJsonStore, type JsonDocumentStore } from './blob-store.ts';
 
+export const hasEmailProvider = () => Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL);
+async function sendEmail(to:string,subject:string,body:string):Promise<void> {
+  if (!hasEmailProvider()) throw new Error('Envio de e-mails não configurado.');
+  const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+process.env.RESEND_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({from:process.env.RESEND_FROM_EMAIL,to:[to],subject,text:body}),signal:AbortSignal.timeout(12000)});
+  if (!response.ok) throw new Error('O serviço de e-mail recusou o envio.');
+}
 export interface CloudAuthOptions {
   store?: JsonDocumentStore<AuthDocument>;
   secret?: string;
@@ -18,7 +24,21 @@ export function createCloudAuth(options: CloudAuthOptions = {}) {
   const auth = betterAuth({
     appName: 'PromoBridge', baseURL: origin.origin, secret,
     database: blobAuthAdapter(store),
-    emailAndPassword: { enabled: true, minPasswordLength: 12, maxPasswordLength: 128 },
+    user: { additionalFields: {
+      username: { type:'string', required:false, defaultValue:'' },
+      phone: { type:'string', required:false, defaultValue:'' }
+    }, changeEmail: { enabled:true, sendChangeEmailConfirmation:async({user,newEmail,url})=>{
+      await sendEmail(user.email,'Promo IAulin: confirme a troca de e-mail','Confirme a alteração para '+newEmail+': '+url);
+    } } },
+    emailVerification: { sendVerificationEmail:async({user,url})=>{
+      await sendEmail(user.email,'Promo IAulin: confirme seu e-mail','Confirme seu e-mail: '+url);
+    } },
+    emailAndPassword: { enabled:true,minPasswordLength:12,maxPasswordLength:128,revokeSessionsOnPasswordReset:true,
+      resetPasswordTokenExpiresIn:1800,
+      sendResetPassword:async({user,url})=>{
+        await sendEmail(user.email,'Promo IAulin: recuperar senha','Defina uma nova senha pelo link (30 minutos): '+url);
+      }
+    },
     trustedOrigins: [origin.origin],
     session: { expiresIn: 7 * 24 * 60 * 60, updateAge: 24 * 60 * 60, cookieCache: { enabled: false } },
     rateLimit: {
@@ -27,6 +47,8 @@ export function createCloudAuth(options: CloudAuthOptions = {}) {
         '/sign-up/email': { window: 60, max: 10 },
         '/sign-in/email': { window: 60, max: 10 },
         '/change-password': { window: 60, max: 5 },
+        '/request-password-reset': { window: 60, max: 3 },
+        '/change-email': { window: 60, max: 3 },
       },
     },
     advanced: { useSecureCookies: origin.protocol === 'https:', disableOriginCheck: false, disableCSRFCheck: false },
