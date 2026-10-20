@@ -3,6 +3,7 @@ import { hashPassword, verifyPassword } from 'better-auth/crypto';
 import { createBlobJsonStore, type JsonDocumentStore } from './blob-store.ts';
 import { type AuthDocument } from './blob-auth-adapter.ts';
 import { SECURITY_QUESTIONS } from '../../../packages/shared/src/security-questions.ts';
+export { SECURITY_QUESTIONS } from '../../../packages/shared/src/security-questions.ts';
 
 // Knowledge-based recovery is less secure than email verification or a recovery key.
 // Keep it opt-in, restrict guesses and never expose stored answers.
