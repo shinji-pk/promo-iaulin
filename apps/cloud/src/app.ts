@@ -74,8 +74,9 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
     const result=await auth().api.updateUser({headers:fromNodeHeaders(req.headers),body:fields});res.json(result);
   });
   app.post('/api/v1/account/password',async(req,res)=>{
-    const parsed=z.object({currentPassword:z.string().min(1).max(128),newPassword:z.string().min(12).max(128)}).strict().parse(req.body);
-    const result=await auth().api.changePassword({headers:fromNodeHeaders(req.headers),body:{...parsed,revokeOtherSessions:true},returnHeaders:true});
+    const parsed=z.object({currentPassword:z.string().min(1).max(128),newPassword:z.string().min(12).max(128),confirmPassword:z.string().min(12).max(128)}).strict().parse(req.body);
+    if(parsed.newPassword!==parsed.confirmPassword){res.status(400).json({error:'As novas senhas não conferem.'});return;}
+    const result=await auth().api.changePassword({headers:fromNodeHeaders(req.headers),body:{currentPassword:parsed.currentPassword,newPassword:parsed.newPassword,revokeOtherSessions:true},returnHeaders:true});
     for(const cookie of result.headers.getSetCookie())res.append('Set-Cookie',cookie);
     res.json({status:Boolean(result.response)});
   });
