@@ -2,7 +2,7 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import { fromNodeHeaders, toNodeHandler } from 'better-auth/node';
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { z, ZodError } from 'zod';
-import { getCloudAuth } from './auth.ts';
+import { getCloudAuth, hasEmailProvider } from './auth.ts';
 import { createBlobJsonStore, type JsonDocumentStore } from './blob-store.ts';
 import { openCookie, parsePairingUrl, requestWorker, sealCookie, type WorkerConnection } from './worker-proxy.ts';
 import { defaultSettings, platformIds, settingsSchema, type Activity, type AppSnapshot, type Offer, type Settings } from '../../../packages/shared/src/index.ts';
@@ -39,10 +39,11 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
   app.use((_req,res,next)=>{res.set({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'no-referrer'});next();});
   app.all('/api/auth/{*splat}',(req,res)=>toNodeHandler(auth())(req,res));
   app.use(express.json({limit:'20mb',strict:true}));
+  app.get('/api/v1/account/capabilities',(_req,res)=>res.json({passwordRecovery:hasEmailProvider(),emailChange:hasEmailProvider()}));
   app.get('/api/v1/account',async(req,res)=>{
     const result=await auth().api.getSession({headers:fromNodeHeaders(req.headers)});
     const data=result?await storeFor(result.user.id).read():null;
-    res.json({mode:'cloud',user:result?{id:result.user.id,name:result.user.name,email:result.user.email}:null,persistence:'cloud',workerConnected:Boolean(data?.connection&&Date.parse(data.connection.expiresAt)>Date.now()),workerUrl:data?.connection?.origin??null,workerExpiresAt:data?.connection?.expiresAt??null,syncedAt:data?.syncedAt??null});
+    res.json({mode:'cloud',user:result?{id:result.user.id,name:result.user.name,email:result.user.email,username:result.user.username??'',phone:result.user.phone??'',image:result.user.image??null}:null,persistence:'cloud',workerConnected:Boolean(data?.connection&&Date.parse(data.connection.expiresAt)>Date.now()),workerUrl:data?.connection?.origin??null,workerExpiresAt:data?.connection?.expiresAt??null,syncedAt:data?.syncedAt??null});
   });
   app.use('/api/v1',async(req,res,next)=>{
     const result=await auth().api.getSession({headers:fromNodeHeaders(req.headers)});
@@ -59,8 +60,13 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
   });
   app.get('/api/v1/session',(_req,res)=>res.json({csrfToken:csrfFor(res.locals.session.id),mode:'cloud'}));
   app.put('/api/v1/account/profile',async(req,res)=>{
-    const {name}=z.object({name:z.string().trim().min(2).max(100)}).strict().parse(req.body);
-    const result=await auth().api.updateUser({headers:fromNodeHeaders(req.headers),body:{name}});res.json(result);
+    const fields=z.object({
+      name:z.string().trim().min(2).max(100),
+      username:z.string().trim().max(40).regex(/^[a-zA-Z0-9._-]*$/),
+      phone:z.string().trim().max(24).regex(/^[+0-9 ()-]*$/),
+      image:z.union([z.string().max(220000).regex(/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/),z.null()]).optional()
+    }).strict().parse(req.body);
+    const result=await auth().api.updateUser({headers:fromNodeHeaders(req.headers),body:fields});res.json(result);
   });
   app.post('/api/v1/account/password',async(req,res)=>{
     const parsed=z.object({currentPassword:z.string().min(1).max(128),newPassword:z.string().min(12).max(128)}).strict().parse(req.body);
