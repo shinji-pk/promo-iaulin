@@ -1,0 +1,118 @@
+name: Instalador Windows | Promo Iaulin
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/windows-installer.yml'
+      - 'installer/**'
+      - 'apps/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig*.json'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  installer:
+    name: Compilar e validar instalador x64
+    runs-on: windows-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Preparar Node.js fixo
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+          cache: npm
+      - name: Preparar .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Instalar dependencias para compilar e testar
+        shell: pwsh
+        run: npm ci --no-audit --no-fund
+      - name: Executar verificacoes
+        shell: pwsh
+        run: npm run check
+      - name: Criar identidade visual
+        shell: pwsh
+        run: |
+          python -m pip install "pillow==11.3.0"
+          python installer/create-artwork.py
+      - name: Compilar aplicativo Windows sem terminal
+        shell: pwsh
+        run: |
+          dotnet publish installer/native/PromoIaulin.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o build-artifacts/desktop-publish
+          if ($LASTEXITCODE -ne 0) { throw "Falha ao compilar aplicativo desktop" }
+      - name: Montar aplicativo interno
+        shell: pwsh
+        run: |
+          npm prune --omit=dev --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { throw "Falha ao preparar dependencias de producao" }
+          $root = Join-Path $pwd 'build-artifacts/app'
+          New-Item -ItemType Directory -Force $root | Out-Null
+          New-Item -ItemType Directory -Force (Join-Path $root 'runtime') | Out-Null
+          Copy-Item package.json (Join-Path $root 'package.json')
+          Copy-Item build-artifacts/iaulin.ico (Join-Path $root 'iaulin.ico')
+          Copy-Item build-artifacts/desktop-publish/PromoIaulin.exe (Join-Path $root 'PromoIaulin.exe')
+          Copy-Item (Get-Command node.exe).Source (Join-Path $root 'runtime/node.exe')
+          & (Join-Path $root 'runtime/node.exe') --version
+          if ($LASTEXITCODE -ne 0) { throw "Node.js interno nao executa" }
+          robocopy node_modules (Join-Path $root 'node_modules') /E /NFL /NDL /NJH /NJS /NP
+          if ($LASTEXITCODE -ge 8) { throw "Falha ao copiar dependencias" }
+          robocopy dist/worker (Join-Path $root 'dist/worker') /E /NFL /NDL /NJH /NJS /NP
+          if ($LASTEXITCODE -ge 8) { throw "Falha ao copiar servidor" }
+          robocopy apps/web/dist (Join-Path $root 'apps/web/dist') /E /NFL /NDL /NJH /NJS /NP
+          if ($LASTEXITCODE -ge 8) { throw "Falha ao copiar painel" }
+          foreach ($required in @('PromoIaulin.exe', 'runtime/node.exe', 'dist/worker/apps/worker/src/index.js', 'apps/web/dist/index.html', 'package.json')) {
+            if (!(Test-Path (Join-Path $root $required))) { throw "Arquivo ausente: $required" }
+          }
+          Push-Location $env:RUNNER_TEMP
+          try {
+            & (Join-Path $root 'runtime/node.exe') --check (Join-Path $root 'dist/worker/apps/worker/src/index.js')
+            if ($LASTEXITCODE -ne 0) { throw "Codigo Node empacotado invalido" }
+          } finally { Pop-Location }
+      - name: Instalar compilador do instalador
+        shell: pwsh
+        run: |
+          $home = [Environment]::GetFolderPath('ProgramFilesX86')
+          $iscc = Join-Path $home 'Inno Setup 6\ISCC.exe'
+          if (!(Test-Path $iscc)) {
+            choco install innosetup -y --no-progress
+            if ($LASTEXITCODE -ne 0) { throw "Inno Setup nao disponivel" }
+          }
+      - name: Gerar executavel unico de instalacao
+        shell: pwsh
+        run: |
+          $home = [Environment]::GetFolderPath('ProgramFilesX86')
+          $iscc = Join-Path $home 'Inno Setup 6\ISCC.exe'
+          if (!(Test-Path $iscc)) { $iscc = Join-Path $home 'Inno Setup 7\ISCC.exe' }
+          if (!(Test-Path $iscc)) { throw "ISCC.exe nao encontrado" }
+          & $iscc 'installer/PromoIaulin.iss'
+          if ($LASTEXITCODE -ne 0) { throw "Falha na compilacao do instalador" }
+          $setup = 'release/Promo-Iaulin-Setup.exe'
+          if (!(Test-Path $setup)) { throw "Instalador nao produzido" }
+          if ((Get-Item $setup).Length -lt 10000000) { throw "Instalador inesperadamente pequeno" }
+          Get-FileHash $setup -Algorithm SHA256 | Format-List
+      - name: Disponibilizar instalador para teste
+        uses: actions/upload-artifact@v4
+        with:
+          name: Promo-Iaulin-Setup-Windows-x64
+          path: release/Promo-Iaulin-Setup.exe
+          if-no-files-found: error
+          retention-days: 30
+      - name: Publicar versao de teste no GitHub Releases
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = "desktop-preview-${{ github.run_number }}"
+          gh release create $tag 'release/Promo-Iaulin-Setup.exe' --target '${{ github.sha }}' --title "Promo Iaulin | Instalador Windows (teste #${{ github.run_number }})" --notes "Versao preliminar para validacao em Windows 10/11 x64. Interface grafica, sem CMD, com dados preservados em AppData. Ainda sem assinatura digital; pode exibir um aviso do SmartScreen. Precisa ficar aberto para processar grupos WhatsApp." --prerelease
+          if ($LASTEXITCODE -ne 0) { throw "Falha ao publicar executavel de teste" }
