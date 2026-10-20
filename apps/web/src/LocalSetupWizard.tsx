@@ -103,7 +103,7 @@ export function LocalSetupWizard({ onClose }: { onClose: () => void }) {
       </div>
       <div className="install-wizard-actions">
         <button className="install-wizard-back" type="button" onClick={previous} disabled={step === 0}><ArrowLeft size={18} /> Voltar</button>
-        {step < steps.length - 1 ? <button className="install-wizard-next" type="button" onClick={next}>{step === 0 ? 'Já encontrei o arquivo' : step === 1 ? 'Já instalei, vamos lá!' : step === 2 ? 'Abri o WhatsApp, próximo' : 'Já li o código'} <ArrowRight size={18} /></button> : <button className="install-wizard-next" type="button" onClick={onClose}>Concluir e aproveitar <Check size={19} /></button>}
+        {step < steps.length - 1 ? <button className="install-wizard-next" type="button" onClick={next}>{step === 0 ? 'Já encontrei o arquivo' : step === 1 ? 'Já instalei, vamos lá!' : step === 2 ? 'Já abri o programa' : 'Já li o código'} <ArrowRight size={18} /></button> : <button className="install-wizard-next" type="button" onClick={onClose}>Concluir e aproveitar <Check size={19} /></button>}
       </div>
       <p className="install-wizard-bottom">🌷 Tudo acontece dentro deste guia. Você pode voltar uma etapa se precisar.</p>
     </div>
