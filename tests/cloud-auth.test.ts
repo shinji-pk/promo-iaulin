@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { createCloudAuth } from '../apps/cloud/src/auth.ts';
+import { describe, expect, it, vi } from 'vitest';
+import { createCloudAuth, getEmailSender, hasEmailProvider } from '../apps/cloud/src/auth.ts';
 import { emptyAuthDocument, type AuthDocument } from '../apps/cloud/src/blob-auth-adapter.ts';
 import { JsonDocumentStore, StoreConflictError, type JsonBackend } from '../apps/cloud/src/blob-store.ts';
 
@@ -66,6 +66,27 @@ function sessionCookie(response: { headers: Headers }) {
 }
 
 const registration = (email = 'pessoa@example.com') => ({ email, password, name: 'Pessoa de teste' });
+
+describe('domain-independent email recovery preparation', () => {
+  it('does not promise password recovery before a sending domain is configured', () => {
+    try {
+      vi.stubEnv('RESEND_API_KEY', 'mock-resend-key-never-used');
+      vi.stubEnv('RESEND_FROM_EMAIL', '');
+      vi.stubEnv('TRANSACTIONAL_EMAIL_DOMAIN', '');
+      expect(getEmailSender()).toBeNull();
+      expect(hasEmailProvider()).toBe(false);
+      vi.stubEnv('TRANSACTIONAL_EMAIL_DOMAIN', 'shinjiapps.com');
+      expect(getEmailSender()).toBe('Promo IAulin <promo@shinjiapps.com>');
+      expect(hasEmailProvider()).toBe(true);
+      vi.stubEnv('TRANSACTIONAL_EMAIL_DOMAIN', 'iaulinbot.vercel.app');
+      expect(hasEmailProvider()).toBe(false);
+      vi.stubEnv('RESEND_FROM_EMAIL', 'Outro Nome <contas@shinjiapps.com>');
+      expect(getEmailSender()).toBe('Outro Nome <contas@shinjiapps.com>');
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+});
 
 describe('cloud authentication through actual Better Auth HTTP handlers and persistent CAS documents', () => {
   it('registers a user and restores its session in a fresh server instance', async () => {
