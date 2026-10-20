@@ -5,6 +5,11 @@ on:
     paths:
       - '.github/workflows/guia-cliente-e2e.yml'
       - 'apps/web/src/LocalSetupWizard.tsx'
+      - 'apps/web/src/AccountGate.tsx'
+      - 'apps/web/src/FeaturePanels.tsx'
+      - 'apps/web/src/FloatingGuide.tsx'
+      - 'apps/web/src/App.tsx'
+      - 'apps/web/src/Settings.tsx'
       - 'apps/web/src/setup-wizard.css'
       - 'tests/e2e/account.spec.ts'
   workflow_dispatch:
