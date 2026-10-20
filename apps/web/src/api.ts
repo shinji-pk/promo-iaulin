@@ -10,13 +10,15 @@ export function isDemonstration() { return demonstration; }
 
 async function request<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
   if (demonstration) return demoRequest(path, method, body) as Promise<T>;
+  // Ações POST sem parâmetros ainda precisam enviar um documento JSON válido.
+  const jsonBody = body === undefined && ['POST', 'PUT', 'PATCH'].includes(method) ? {} : body;
   let response: Response;
   try {
     response = await fetch(`/api/v1${path}`, {
       method,
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json', ...(csrf ? { 'X-CSRF-Token': csrf } : {}) },
-      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+      ...(jsonBody !== undefined ? { body: JSON.stringify(jsonBody) } : {}),
       signal: AbortSignal.timeout(path === '/remote/start' ? 90000 : 30000),
     });
   } catch { throw new Error('Não conseguimos acessar o aplicativo local. Confira se o PromoBridge está aberto no computador e tente novamente.'); }

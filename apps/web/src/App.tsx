@@ -82,7 +82,7 @@ export default function App() {
     if (!next) return;
     await run(async () => { const saved = await api.put<Settings>('/settings', next); dirty.current = false; setDraft(structuredClone(saved)); }, isDemonstration() ? 'Preferências salvas nesta demonstração.' : 'Preferências salvas. Tudo do seu jeito.');
   }
-  const connect = () => { if (isDemonstration()) { notify('Abra o PromoBridge no seu computador para conectar seu WhatsApp por QR Code.'); return; } void run(() => api.post('/whatsapp/connect')).catch(() => undefined); };
+  const connect = () => { if (isDemonstration()) { notify('Abra o PromoBridge no seu computador para conectar seu WhatsApp por QR Code.'); return; } if (account.cloud && !account.workerConnected) { account.open(); notify('Primeiro conecte o aplicativo do computador em Minha conta. Depois, o WhatsApp será vinculado pelo QR Code.'); return; } void run(() => api.post('/whatsapp/connect')).catch(() => undefined); };
   const reset = () => { void run(() => api.post('/whatsapp/reset'), 'WhatsApp desconectado.').catch(() => undefined); };
   const groups = () => { void run(() => api.get('/whatsapp/groups'), 'Lista de grupos atualizada.').catch(() => undefined); };
   const calibrate = (platform: PlatformId, config: AffiliateConfig) => run(() => api.post<{ valid: boolean; reason: string }>(`/affiliates/${platform}/calibrate`, { enabled: config.enabled, publicId: config.publicId, originalUrl: config.originalUrl, affiliateUrl: config.affiliateUrl })).then(async result => { const state = await api.state(); setDraft(previous => previous ? { ...previous, affiliates: { ...previous.affiliates, [platform]: state.settings.affiliates[platform] } } : state.settings); return result; });
@@ -110,7 +110,7 @@ export default function App() {
         {refreshError && <div className="notice notice-warning" role="alert"><Wifi size={17} /><p>{refreshError} Os dados abaixo podem estar desatualizados.</p><Button variant="ghost" icon={RefreshCw} onClick={() => void refresh().catch(error => setRefreshError(errorMessage(error)))}>Tentar novamente</Button></div>}
         {page === 'today' && <Today snapshot={snapshot} go={go} onOpen={offer => setSelectedId(offer.id)} onSimulate={() => setSimulator(true)} onOnboard={() => setOnboarding(true)} onExamples={() => void loadExamples().catch(() => undefined)} busy={busy} today={today} />}
         {(page === 'queue' || page === 'discover' || page === 'published') && <OffersPage key={page} offers={snapshot.offers} kind={page} onOpen={offer => setSelectedId(offer.id)} onSimulate={() => setSimulator(true)} onAdd={() => setManualOffer(true)} query={query} setQuery={setQuery} />}
-        {page === 'sources' && <SourcesPage {...settingsProps} onConnect={connect} onReset={reset} onGroups={groups} />}
+        {page === 'sources' && <SourcesPage {...settingsProps} cloudNeedsWorker={account.cloud && !account.workerConnected} onConnect={connect} onReset={reset} onGroups={groups} />}
         {page === 'affiliates' && <AffiliatesPage {...settingsProps} onCalibrate={calibrate} />}
         {page === 'audience' && <AudiencePage {...settingsProps} />}
         {page === 'automation' && <AutomationPage {...settingsProps} />}
