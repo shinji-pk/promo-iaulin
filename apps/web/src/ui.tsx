@@ -1,3 +1,4 @@
+import { Iaulin } from './Brand.tsx';
 import { cloneElement, isValidElement, useEffect, useId, useRef, type ReactElement, type ReactNode } from 'react';
 import { ArrowUpRight, Check, ChevronRight, LoaderCircle, X, type LucideIcon } from 'lucide-react';
 
@@ -6,7 +7,7 @@ export function Button({ children, onClick, variant = 'primary', icon: Icon, dis
 }
 export function Badge({ children, tone = 'neutral', dot = false }: { children: ReactNode; tone?: 'neutral' | 'green' | 'amber' | 'purple' | 'red'; dot?: boolean }) { return <span className={`badge badge-${tone}`}>{dot && <span className="status-dot" />}{children}</span>; }
 export function SectionTitle({ title, description, action }: { title: string; description?: string; action?: ReactNode }) { return <div className="section-title"><div><h2>{title}</h2>{description && <p>{description}</p>}</div>{action}</div>; }
-export function EmptyState({ icon: Icon, title, description, action, compact = false }: { icon: LucideIcon; title: string; description: string; action?: ReactNode; compact?: boolean }) { return <div className={`empty-state ${compact ? 'compact' : ''}`}><div className="empty-icon"><Icon size={27} strokeWidth={1.35} /><span className="empty-spark">✧</span></div><h3>{title}</h3><p>{description}</p>{action}</div>; }
+export function EmptyState({ icon: Icon, title, description, action, compact = false }: { icon: LucideIcon; title: string; description: string; action?: ReactNode; compact?: boolean }) { return <div className={`empty-state ${compact ? 'compact' : ''}`}><div className="empty-mascot"><Iaulin size={72} mood="think" /><span className="empty-badge"><Icon size={14} strokeWidth={1.8} /></span></div><h3>{title}</h3><p>{description}</p>{action}</div>; }
 export function Field({ label, hint, children, className = '' }: { label: string; hint?: string; children: ReactNode; className?: string }) {
   const generatedId = useId();
   const control = isValidElement(children) ? children as ReactElement<{ id?: string; 'aria-describedby'?: string }> : null;

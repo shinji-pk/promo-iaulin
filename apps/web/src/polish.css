@@ -1,0 +1,116 @@
+/* Promo · Iaulin Bot — camada de acabamento (somente CSS, sem fontes ou bibliotecas extras). */
+:root {
+  --ux-ease: cubic-bezier(.2, .8, .2, 1);
+  --ux-plum-grad: linear-gradient(180deg, #5c3353 0%, #4d2945 100%);
+  --ux-focus: 0 0 0 3px #fffdfb, 0 0 0 5px #a8839866;
+  --ux-pop: 0 26px 60px #36213533, 0 4px 14px #3621351a;
+}
+
+/* Bordas mais macias e consistentes */
+.button { border-radius: 12px; transition: transform .14s var(--ux-ease), box-shadow .2s var(--ux-ease), background-color .2s ease, border-color .2s ease; }
+.button-primary { background: var(--ux-plum-grad); }
+.button-primary:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 10px 22px #4d294526; }
+.button:not(:disabled):active, .icon-button:active, .nav-item:active, .account-tabs > button:active, .guide-tabs > button:active { transform: scale(.965); }
+.panel, .metric-card { border-radius: 18px; }
+.offer-card, .notice, .mode-option, .style-option, .sidebar-note { border-radius: 14px; }
+.modal { border-radius: 22px; }
+.account-tabs, .guide-tabs { border-radius: 14px; }
+.account-tabs > button, .guide-tabs > button { border-radius: 10px; transition: background-color .2s ease, box-shadow .2s ease, color .2s ease; }
+.nav-item { border-radius: 12px; transition: background-color .18s ease, color .18s ease, transform .14s var(--ux-ease); }
+.field-control input, .field-control select, .field-control textarea, .account-login input { border-radius: 12px; transition: border-color .18s ease, box-shadow .18s ease; }
+.field-control input:focus, .field-control select:focus, .field-control textarea:focus, .account-login input:focus { box-shadow: 0 0 0 4px #a8839826; }
+:where(button, a, summary, [role='tab']):focus-visible { outline: none; box-shadow: var(--ux-focus); }
+
+@media (hover: hover) {
+  .metric-card, .offer-card { transition: transform .2s var(--ux-ease), box-shadow .2s var(--ux-ease); }
+  .metric-card:hover, .offer-card:hover { transform: translateY(-2px); box-shadow: 0 14px 30px #4d294514; }
+}
+
+/* Efeito de toque */
+.ux-ripple-host { position: relative; }
+.ux-ripple-wrap { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
+.ux-ripple { position: absolute; border-radius: 50%; background: currentColor; opacity: .16; transform: scale(0); animation: ux-ripple .6s var(--ux-ease) forwards; }
+@keyframes ux-ripple { to { transform: scale(1); opacity: 0; } }
+
+/* Avatares com foto */
+.avatar-button, .profile-avatar { overflow: visible; }
+.avatar-button img, .profile-avatar.has-photo img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
+.avatar-button:has(img) { padding: 0; overflow: hidden; }
+
+/* ---------- Mascote Iaulin ---------- */
+.iaulin { display: block; overflow: visible; }
+.iaulin-antenna { transform-origin: 38px 12px; animation: iaulin-wiggle 4.4s ease-in-out infinite; }
+.iaulin-eyes { transform-origin: 33px 36px; animation: iaulin-blink 6s infinite; }
+@keyframes iaulin-wiggle { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(8deg); } }
+@keyframes iaulin-blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.15); } }
+
+.guide-launcher { gap: 8px; padding-left: 8px; transition: transform .2s var(--ux-ease), box-shadow .2s var(--ux-ease); background: var(--ux-plum-grad); }
+.guide-launcher:hover { transform: translateY(-2px); box-shadow: 0 12px 28px #36213538; }
+.guide-mascot { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: #fbf1f6; box-shadow: inset 0 0 0 1px #ffffff55; }
+.guide-panel { border-radius: 22px; box-shadow: var(--ux-pop); transform-origin: bottom right; animation: ux-pop .28s var(--ux-ease); }
+.guide-account details { border-bottom: 1px solid #f0e6ec; }
+.guide-bubble { position: absolute; right: 0; bottom: 64px; width: 250px; }
+
+.mascot-help { position: fixed; right: 22px; bottom: 22px; z-index: 60; display: grid; justify-items: end; gap: 12px; }
+.mascot-fab { width: 60px; height: 60px; display: grid; place-items: center; border-radius: 50%; border: 1px solid #e7d9e1; background: radial-gradient(circle at 30% 25%, #fff, #f6ecf1); box-shadow: 0 12px 30px #3621352e; cursor: pointer; transition: transform .22s var(--ux-ease), box-shadow .22s var(--ux-ease); animation: ux-float 5s ease-in-out infinite; }
+.mascot-fab:hover { transform: translateY(-3px) scale(1.04); }
+.mascot-fab:active { transform: scale(.94); }
+.mascot-fab.is-open { animation: none; background: #fff; }
+@keyframes ux-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -4px; } }
+.mascot-bubble { position: relative; max-width: 250px; display: grid; gap: 4px; padding: 13px 32px 13px 15px; border-radius: 18px 18px 6px 18px; background: #4d2945; color: #f6eaf0; font-size: 13.5px; line-height: 1.45; box-shadow: var(--ux-pop); animation: ux-pop .35s var(--ux-ease); }
+.mascot-bubble b { color: #fff; font-size: 14.5px; }
+.mascot-bubble > button { position: absolute; top: 8px; right: 8px; display: grid; place-items: center; width: 22px; height: 22px; border: 0; border-radius: 50%; background: transparent; color: #e9d3df; cursor: pointer; }
+.mascot-panel { width: min(360px, calc(100vw - 32px)); max-height: min(540px, calc(100dvh - 130px)); display: grid; grid-template-rows: auto 1fr auto; overflow: hidden; border-radius: 22px; background: #fffdfb; border: 1px solid #e3d5dd; box-shadow: var(--ux-pop); transform-origin: bottom right; animation: ux-pop .28s var(--ux-ease); }
+.mascot-panel header { display: flex; align-items: center; gap: 12px; padding: 15px 15px 13px; background: linear-gradient(135deg, #f7ecf2, #fffaf7); border-bottom: 1px solid #efe4ea; }
+.mascot-panel header div { flex: 1; display: grid; gap: 2px; }
+.mascot-panel header b { color: #3c2236; font-size: 16px; font-family: Georgia, serif; font-weight: 400; }
+.mascot-panel header span { color: #8b7383; font-size: 12.5px; }
+.mascot-panel header > button { width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: #6d5265; cursor: pointer; }
+.mascot-topics { overflow-y: auto; padding: 8px; display: grid; gap: 3px; align-content: start; }
+.mascot-topics details { border-radius: 14px; }
+.mascot-topics details[open] { background: #faf3f7; }
+.mascot-topics summary { list-style: none; cursor: pointer; position: relative; padding: 12px 34px 12px 12px; border-radius: 14px; font-weight: 600; font-size: 14px; color: #44293d; }
+.mascot-topics summary::-webkit-details-marker { display: none; }
+.mascot-topics summary::after { content: "+"; position: absolute; right: 14px; top: 50%; translate: 0 -50%; color: #a8839a; font-size: 18px; transition: rotate .2s; }
+.mascot-topics details[open] summary::after { rotate: 45deg; }
+.mascot-topics summary:hover { background: #f6eef2; }
+.mascot-topics p { margin: 0 12px 10px; font-size: 13.5px; line-height: 1.6; color: #6a5664; }
+.mascot-action { display: inline-flex; align-items: center; gap: 6px; margin: 0 12px 12px; padding: 9px 13px; border: 0; border-radius: 999px; background: var(--ux-plum-grad); color: #fff; font-weight: 600; font-size: 13px; cursor: pointer; }
+.mascot-panel footer { display: flex; flex-wrap: wrap; gap: 6px; padding: 11px 12px; border-top: 1px solid #f1e7ec; background: #fdf9fa; }
+.mascot-panel footer button, .mascot-panel footer a { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border: 0; border-radius: 999px; background: #f4eaf0; color: #5b3a51; font-size: 12.5px; font-weight: 600; text-decoration: none; cursor: pointer; }
+.mascot-panel footer a { margin-left: auto; background: #4d2945; color: #fff; }
+@keyframes ux-pop { from { opacity: 0; transform: translateY(10px) scale(.96); } to { opacity: 1; transform: none; } }
+
+/* Ajuda contextual após tentativas de login sem sucesso */
+.login-nudge { display: flex; gap: 10px; align-items: flex-start; margin: 4px 0 14px; padding: 12px 14px; border-radius: 14px; background: #fff5e8; color: #6e4f2a; font-size: 14px; line-height: 1.5; animation: ux-pop .3s var(--ux-ease); }
+.login-nudge p { margin: 0; }
+.login-nudge button { display: block; margin-top: 6px; padding: 0; border: 0; background: none; color: #75405b; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+
+/* Foto de perfil */
+.avatar-uploader { display: flex; align-items: center; gap: 16px; padding: 14px; border: 1px dashed #e0cfd9; border-radius: 16px; background: #fdf8fa; margin-bottom: 6px; }
+.avatar-preview { width: 72px; height: 72px; flex-shrink: 0; display: grid; place-items: center; overflow: hidden; border-radius: 50%; background: linear-gradient(135deg, #f3e6ee, #e6d2de); color: #4d2945; font: 28px Georgia, serif; box-shadow: 0 0 0 4px #fff, 0 6px 16px #4d29451f; }
+.avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
+.avatar-actions { display: grid; gap: 6px; min-width: 0; }
+.avatar-actions small { color: #9a8693; font-size: 12.5px; line-height: 1.5; }
+.avatar-buttons { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.avatar-buttons .account-plain-link { padding: 6px 0; }
+.avatar-pick { position: relative; display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; border-radius: 999px; border: 1px solid #e3d3dc; background: #fff; color: #4d2945; font-size: 14px; font-weight: 600; cursor: pointer; }
+.avatar-pick:hover { border-color: #a88398; }
+.avatar-pick:focus-within { box-shadow: var(--ux-focus); }
+.avatar-pick input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+/* Campos de arquivo (backup, restauração) com botão no estilo do app */
+input[type="file"]::file-selector-button { border: 0; border-radius: 999px; padding: 8px 14px; margin-right: 12px; background: #f3e8ee; color: #4d2945; font: inherit; font-weight: 600; cursor: pointer; transition: background-color .18s ease; }
+input[type="file"]::file-selector-button:hover { background: #ead9e3; }
+
+@media (max-width: 800px) {
+  .mascot-help { right: 14px; bottom: 14px; }
+  .mascot-fab { width: 54px; height: 54px; }
+  /* No celular, a apresentação fica curta para o formulário aparecer logo. */
+  .account-screen .account-welcome h1 { font-size: 32px; margin-bottom: 8px; }
+  .account-screen .account-welcome > p, .account-screen .account-promise { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .iaulin-antenna, .iaulin-eyes, .mascot-fab, .mascot-panel, .mascot-bubble, .guide-panel, .login-nudge { animation: none !important; }
+  .button, .nav-item, .metric-card, .offer-card, .guide-launcher, .mascot-fab { transition: none !important; }
+}

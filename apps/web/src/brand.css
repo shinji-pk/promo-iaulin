@@ -1,0 +1,105 @@
+/* =====================================================================
+   Promo · Iaulin Bot — identidade padrão (Noite ameixa). Ver DESIGN.md.
+   Carregado por último: tokens + acabamento, sem JS extra.
+   ===================================================================== */
+:root {
+  --night: #1a0a1d;      /* Noite ameixa */
+  --plum-brand: #3b1838; /* Ameixa (marca) */
+  --flash: #ff4f7b;      /* Coral relâmpago — ação */
+  --offer: #ff7a45;      /* Laranja oferta */
+  --coupon: #ffd25a;     /* Amarelo cupom — só preço/cupom */
+  --blush: #fff8fb;      /* Fundo claro */
+  --font-display: "Unbounded", "DM Sans", system-ui, sans-serif;
+  --font-body: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --cta: linear-gradient(135deg, #ff4f7b, #ff7a45);
+  --night-glow: radial-gradient(700px 420px at 100% 0%, #5b1e57 0%, transparent 60%), radial-gradient(600px 420px at 0% 100%, #3a1240 0%, transparent 60%), #1a0a1d;
+  /* tokens do app */
+  --plum: #3b1838;
+  --paper: #fff8fb;
+  --mauve: #ff4f7b;
+}
+body { background: var(--blush); font-family: var(--font-body); }
+::selection { background: #ffd25a; color: #3b1838; }
+
+/* ---------- Títulos: Unbounded no lugar da serifada ---------- */
+.account-brand>b, .account-login h2, .account-welcome h1, .all-good-card h3, .all-good-card>b, .brand-name, .dashboard-greeting, .dashboard-intro h1, .dashboard-overview h3, .empty-state h3, .guide-panel h2, .hero-copy h2, .install-wizard-app-brand, .install-wizard-heading h3, .learning-note b, .modal-heading h2, .offline-card h1, .onboarding-content>h2, .onboarding-summary h3, .onboarding-welcome h1, .page-intro h1, .quiet-visual b, .recovery-sheet h2, .settings-panel>h3, .setup-card>h2, .sidebar-note>b, .story-card h3, .today-offers .empty-state h3 {
+  font-family: var(--font-display) !important;
+  font-style: normal !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.035em !important;
+}
+.page-intro h1, .dashboard-intro h1, .account-welcome h1 { font-size: clamp(26px, 3.2vw, 40px) !important; line-height: 1.08 !important; }
+.hero-copy h2 { font-size: clamp(24px, 2.6vw, 34px) !important; line-height: 1.1 !important; }
+.hero-copy h2 em, .account-welcome h1 em { font-style: normal; color: var(--coupon); }
+
+/* ---------- Logo: etiqueta com seta para cima (substitui o "p↗") ---------- */
+.brand-mark {
+  font-size: 0 !important;
+  color: transparent !important;
+  border-radius: 12px !important;
+  padding: 0 !important;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ff4f7b'/%3E%3Cstop offset='1' stop-color='%237a1f6e'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='18' fill='url(%23g)'/%3E%3Cpath d='M12 22c0-4 3-7 7-7h19l14 14v18c0 4-3 7-7 7H19c-4 0-7-3-7-7z' fill='%23fff'/%3E%3Ccircle cx='43' cy='24' r='3.2' fill='%23ff4f7b'/%3E%3Cpath d='M22 44L36 30M27 30h9v9' fill='none' stroke='%233b1838' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / cover no-repeat !important;
+  box-shadow: 0 8px 22px #ff4f7b40;
+}
+.brand-mark > span { display: none !important; }
+
+/* ---------- Barra lateral: noite ameixa ---------- */
+.sidebar { background: var(--night-glow) !important; border-right: 0 !important; color: #f3e3ee; }
+.sidebar .brand-name { color: #fff; }
+.sidebar .brand-caption, .sidebar .nav-heading { color: #c79bb6; }
+.sidebar .workspace-label { background: #ffffff0d; border-color: #ffffff1a; color: #f0d9e7; }
+.sidebar .nav-item { color: #e2c4d6; border-radius: 12px; }
+.sidebar .nav-item:hover { background: #ffffff10; color: #fff; }
+.sidebar .nav-item.active { background: linear-gradient(90deg, #ff4f7b33, #ff4f7b0d); color: #fff; box-shadow: inset 0 0 0 1px #ff4f7b40; }
+.sidebar .nav-item.active:before { background: var(--flash); box-shadow: 0 0 10px var(--flash); }
+.sidebar .nav-count { background: var(--coupon); color: #3b1838; font-weight: 700; }
+.sidebar .sidebar-note { background: #ffffff0d; border-color: #ffffff1a; color: #f3e3ee; border-radius: 16px; }
+.sidebar .sidebar-note p { color: #d6b6c9; }
+.sidebar .sidebar-profile { border-top-color: #ffffff1a; }
+.sidebar .profile-info span { color: #c79bb6; }
+.sidebar .profile-avatar { background: linear-gradient(135deg, #ffd25a, #ff7a45); color: #3b1838; }
+
+/* ---------- Botões ---------- */
+.button { border-radius: 14px !important; font-weight: 600; }
+.button-primary { background: var(--cta) !important; color: #fff !important; border-color: transparent !important; box-shadow: 0 10px 24px #ff4f7b47 !important; }
+.button-primary:not(:disabled):hover { filter: brightness(1.05); transform: translateY(-1px); }
+.button-secondary { border-radius: 14px !important; }
+
+/* ---------- Painel de destaque ---------- */
+.hero-panel {
+  border-radius: 26px !important;
+  background: radial-gradient(480px 260px at 100% 0%, #ff4f7b4d, transparent 60%), radial-gradient(400px 240px at 0% 100%, #ffd25a1f, transparent 60%), linear-gradient(150deg, #3b1838, #1a0a1d) !important;
+  box-shadow: 0 24px 50px #1a0a1d40;
+}
+.panel, .metric-card { border-radius: 20px !important; }
+.offer-card { border-radius: 18px !important; }
+.modal { border-radius: 24px !important; }
+.badge-amber, .coupon, .price-current { color: inherit; }
+
+/* ---------- Avatar ---------- */
+.avatar-button { background: linear-gradient(135deg, #ffd25a, #ff7a45) !important; color: #3b1838 !important; border: 0 !important; font-family: var(--font-display) !important; font-style: normal !important; }
+
+/* ---------- Entrada: vitrine noturna ---------- */
+.account-screen { max-width: none !important; margin: 0 !important; padding-inline: max(20px, calc((100vw - 1200px) / 2)) !important; background: var(--night-glow); color: #fbeef7; }
+.account-screen .account-welcome h1 { color: #fff !important; }
+.account-screen .account-welcome > p { color: #e3c6d8 !important; }
+.account-screen .account-promise { color: #d5f2df !important; }
+.account-screen .eyebrow { color: #ff9ebc; }
+.account-screen .account-brand b { color: #fff; }
+.account-login { background: #fff8fb !important; border: 0 !important; border-radius: 28px !important; box-shadow: 0 30px 80px #00000059 !important; color: #3b1838; }
+.account-login input:focus { border-color: var(--flash) !important; box-shadow: 0 0 0 4px #ff4f7b26 !important; }
+.account-tabs > button[aria-selected=true] { color: #c2185b; }
+.account-plain-link { color: #c2185b !important; }
+
+/* ---------- Estados vazios com o Iaulin ---------- */
+.empty-mascot { position: relative; display: inline-grid; place-items: center; margin-bottom: 10px; }
+.empty-mascot .mascot { filter: drop-shadow(0 10px 20px #ff4f7b33); }
+.empty-badge { position: absolute; right: -4px; bottom: 4px; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; background: #fff; color: #c2185b; box-shadow: 0 4px 10px #3b183822; }
+
+/* ---------- Mascote: vida discreta ---------- */
+.mascot .mascot-antenna { transform-origin: 40px 14px; animation: ib-wiggle 4.4s ease-in-out infinite; }
+.mascot .mascot-eyes { transform-origin: 32px 39px; animation: ib-blink 6s infinite; }
+@keyframes ib-wiggle { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(8deg); } }
+@keyframes ib-blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.15); } }
+.guide-launcher { background: var(--cta) !important; border-color: transparent !important; }
+@media (prefers-reduced-motion: reduce) { .mascot .mascot-antenna, .mascot .mascot-eyes { animation: none !important; } }
