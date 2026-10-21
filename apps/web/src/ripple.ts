@@ -3,7 +3,7 @@ const SELECTOR = "button, .button, [role='tab'], .nav-item";
 
 export function installRipple(): void {
   if (typeof window === "undefined") return;
-  let reduce = false;
+  let reduce: boolean;
   try {
     reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   } catch {

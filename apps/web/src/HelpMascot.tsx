@@ -16,7 +16,7 @@ const INTRO_KEY = 'promo-iaulin-intro';
 export function useIntroBubble(delay = 2400) {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
-    let seen = true;
+    let seen: boolean;
     try { seen = localStorage.getItem(INTRO_KEY) === '1'; } catch { seen = true; }
     if (seen) return;
     const show = window.setTimeout(() => setVisible(true), delay), hide = window.setTimeout(() => setVisible(false), delay + 9000);
