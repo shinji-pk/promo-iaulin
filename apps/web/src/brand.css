@@ -26,7 +26,7 @@ body { background: var(--blush); font-family: var(--font-body); }
   font-family: var(--font-display) !important;
   font-style: normal !important;
   font-weight: 700 !important;
-  letter-spacing: -0.035em !important;
+  letter-spacing: -0.02em !important;
 }
 .page-intro h1, .dashboard-intro h1, .account-welcome h1 { font-size: clamp(26px, 3.2vw, 40px) !important; line-height: 1.08 !important; }
 .hero-copy h2 { font-size: clamp(24px, 2.6vw, 34px) !important; line-height: 1.1 !important; }
@@ -103,3 +103,8 @@ body { background: var(--blush); font-family: var(--font-body); }
 @keyframes ib-blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.15); } }
 .guide-launcher { background: var(--cta) !important; border-color: transparent !important; }
 @media (prefers-reduced-motion: reduce) { .mascot .mascot-antenna, .mascot .mascot-eyes { animation: none !important; } }
+
+/* Ajustes finos */
+.sidebar .brand-name { font-size: 18px !important; white-space: nowrap; letter-spacing: -0.03em !important; }
+.mascot-panel header b { font-family: var(--font-display) !important; font-weight: 700; font-size: 15px; letter-spacing: -0.02em; }
+.mascot-action { background: var(--cta) !important; }
