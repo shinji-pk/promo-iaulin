@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp, type WhatsAppTransport } from '../apps/worker/src/api.ts';
 import { Database } from '../packages/db/src/index.ts';
-import { defaultSettings, type AppSnapshot, type Offer, type Settings, type WhatsAppStatus } from '../packages/shared/src/index.ts';
+import { defaultSettings, RISK_NOTICE_VERSION, type AppSnapshot, type Offer, type Settings, type WhatsAppStatus } from '../packages/shared/src/index.ts';
 
 const source='123456@g.us';
 const destination='987654@g.us';
@@ -13,7 +13,7 @@ const originalUrl='https://www.amazon.com.br/dp/B012345678';
 const affiliateUrl=`${originalUrl}?tag=promobridge-20`;
 const promo=(asin='B012345678') => `Creme hidratante facial\nDe R$ 100,00 por R$ 49,90\nCupom: BELEZA10\nFrete grátis\nhttps://www.amazon.com.br/dp/${asin}`;
 const config={enabled:true,publicId:'promobridge-20',originalUrl,affiliateUrl};
-const configured=():Settings => ({...defaultSettings(),sourceGroups:[source],destinationGroup:destination,minScore:0,quietStart:'00:00',quietEnd:'00:00'});
+const configured=():Settings => ({...defaultSettings(),riskNotice:{version:RISK_NOTICE_VERSION,acceptedAt:'2026-10-18T12:00:00.000Z'},sourceGroups:[source],destinationGroup:destination,minScore:0,quietStart:'00:00',quietEnd:'00:00'});
 
 function transport() {
   const status:WhatsAppStatus={connected:true,connecting:false,qrDataUrl:null,user:'Dispositivo de teste',groups:[{id:source,name:'Fonte',participants:2},{id:destination,name:'Destino',participants:2}],lastError:null};

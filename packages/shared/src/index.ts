@@ -26,9 +26,42 @@ export const settingsSchema = z.object({
   retentionDays:z.number().int().min(30).max(730).default(90), onboardingComplete:z.boolean().default(false),
   allowPriceDrop:z.boolean().default(true),priceDropPercent:z.number().min(5).max(90).default(15)
   ,maxOfferAgeHours:z.number().int().min(1).max(168).default(24)
+  // Aviso obrigatório sobre o uso do WhatsApp (número alternativo, risco de bloqueio). Sem aceite, nada é publicado.
+  ,riskNotice:z.object({version:z.number().int().min(0).max(1000).default(0),acceptedAt:z.string().max(40).nullable().default(null)}).default({version:0,acceptedAt:null})
+  // Variação aleatória (estável) acrescentada ao intervalo mínimo, para os envios não saírem em ritmo de robô.
+  ,intervalJitterPercent:z.number().int().min(0).max(100).default(30)
+  // Ritmo de alto risco só vale depois que a pessoa assume o risco daquele ritmo (ou de um mais agressivo).
+  ,paceRiskAccepted:z.object({maxPostsPerHour:z.number().int().min(1).max(30),minIntervalMinutes:z.number().int().min(1).max(1440),acceptedAt:z.string().max(40)}).nullable().default(null)
 });
 export type Settings = z.infer<typeof settingsSchema>;
 export const defaultSettings = (): Settings => structuredClone(settingsSchema.parse({}));
+
+/** Versão do aviso de uso do WhatsApp. Aumentar quando o texto mudar de forma relevante: todo mundo aceita de novo. */
+export const RISK_NOTICE_VERSION = 1;
+export type PaceRisk = 'low'|'moderate'|'high';
+/** Referência de cautela, não garantia: o WhatsApp não publica limites oficiais para contas comuns. */
+export function sendingPaceRisk(pace: Pick<Settings,'maxPostsPerHour'|'minIntervalMinutes'>): PaceRisk {
+  if (pace.minIntervalMinutes >= 5 && pace.maxPostsPerHour <= 6) return 'low';
+  if (pace.minIntervalMinutes >= 2 && pace.maxPostsPerHour <= 12) return 'moderate';
+  return 'high';
+}
+export function riskNoticeAccepted(settings: Pick<Settings,'riskNotice'>): boolean {
+  return settings.riskNotice.version >= RISK_NOTICE_VERSION && typeof settings.riskNotice.acceptedAt === 'string' && settings.riskNotice.acceptedAt.length > 0;
+}
+export function paceRiskCovered(settings: Pick<Settings,'maxPostsPerHour'|'minIntervalMinutes'|'paceRiskAccepted'>): boolean {
+  if (sendingPaceRisk(settings) !== 'high') return true;
+  const accepted = settings.paceRiskAccepted;
+  return Boolean(accepted && accepted.acceptedAt && settings.maxPostsPerHour <= accepted.maxPostsPerHour && settings.minIntervalMinutes >= accepted.minIntervalMinutes);
+}
+/** Intervalo efetivo depois do último envio: mínimo + variação estável derivada do horário desse envio. */
+export function effectiveIntervalMs(settings: Pick<Settings,'minIntervalMinutes'|'intervalJitterPercent'>, lastSentAt: number): number {
+  const base = settings.minIntervalMinutes * 60_000;
+  const jitter = Math.max(0, Math.min(100, settings.intervalJitterPercent)) / 100;
+  if (!jitter) return base;
+  let seed = Math.abs(Math.trunc(lastSentAt)) % 2_147_483_647 || 1;
+  seed = (seed * 48_271) % 2_147_483_647;
+  return Math.round(base * (1 + jitter * (seed / 2_147_483_647)));
+}
 
 export type IntegrationState = 'not_configured'|'needs_calibration'|'testing'|'ready'|'degraded'|'blocked';
 export interface Product { platform:PlatformId; productId:string; productKey:string; canonicalUrl:string; }

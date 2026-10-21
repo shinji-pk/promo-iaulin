@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildAffiliateLink, calibrateAffiliate, getIntegrationStatuses, identifyPlatform, identifyProduct, validateAffiliateLink, validateCalibration } from '../packages/affiliate-adapters/src/index.ts';
 import { evaluatePublication, extractUrls, MAX_LINKS_PER_MESSAGE, MAX_PROCESSING_MS, parseLinkedOffers, parseOffer, processPromotion, renderMessage } from '../packages/core/src/index.ts';
 import { scoreOffer } from '../packages/scoring/src/index.ts';
-import { defaultSettings, platformIds, type AffiliateConfig, type Feedback, type Offer, type Settings } from '../packages/shared/src/index.ts';
+import { defaultSettings, effectiveIntervalMs, paceRiskCovered, platformIds, RISK_NOTICE_VERSION, riskNoticeAccepted, sendingPaceRisk, type AffiliateConfig, type Feedback, type Offer, type Settings } from '../packages/shared/src/index.ts';
 import { offerSchema } from '../packages/db/src/index.ts';
 import type { AffiliatePort } from '../packages/shared/src/features.ts';
 
@@ -12,7 +12,7 @@ const second = 'https://www.amazon.com.br/dp/B0B1N5H7X2';
 const calibration = (): AffiliateConfig => ({enabled:true,publicId:'garimpos-20',originalUrl:original,affiliateUrl:`${original}?tag=garimpos-20`,verifiedAt:now.toISOString()});
 const settings = (): Settings => {
   const result = defaultSettings();
-  Object.assign(result,{mode:'auto',minScore:60,sourceGroups:['source@g.us'],destinationGroup:'destination@g.us',quietStart:'00:00',quietEnd:'00:00'});
+  Object.assign(result,{riskNotice:{version:RISK_NOTICE_VERSION,acceptedAt:'2026-10-18T12:00:00.000Z'},mode:'auto',minScore:60,sourceGroups:['source@g.us'],destinationGroup:'destination@g.us',quietStart:'00:00',quietEnd:'00:00'});
   result.affiliates.amazon = calibration();
   return result;
 };
@@ -384,5 +384,40 @@ describe('score explicável e feedback conservador',()=> {
     expect(adjustment(feedback,[])).toBe(0);
     const latest=feedback.map(item=>({...item,id:`${item.id}-latest`,action:'reject' as const,createdAt:'2026-10-18T15:01:00.000Z'}));
     expect(adjustment([...feedback,...latest])).toBeLessThan(0);
+  });
+});
+
+describe('aviso de uso do WhatsApp e ritmo de envio', () => {
+  const base = (): Settings => settings();
+
+  it('sem aceite do aviso nada é publicado, nem com tudo o mais liberado', async () => {
+    const pending = { ...settings(), riskNotice: { version: 0, acceptedAt: null } };
+    expect(riskNoticeAccepted(defaultSettings())).toBe(false);
+    const approved = { ...(await offer()), status: 'approved' as const };
+    expect(evaluatePublication(approved, pending, [], now).reasons.join(' ')).toMatch(/número alternativo/);
+    expect(riskNoticeAccepted(base())).toBe(true);
+    expect(riskNoticeAccepted({ ...base(), riskNotice: { version: RISK_NOTICE_VERSION - 1, acceptedAt: now.toISOString() } })).toBe(false);
+  });
+
+  it('classifica o ritmo e exige assumir o risco de um ritmo alto', () => {
+    expect(sendingPaceRisk({ maxPostsPerHour: 4, minIntervalMinutes: 15 })).toBe('low');
+    expect(sendingPaceRisk({ maxPostsPerHour: 12, minIntervalMinutes: 3 })).toBe('moderate');
+    expect(sendingPaceRisk({ maxPostsPerHour: 30, minIntervalMinutes: 1 })).toBe('high');
+    const fast = { ...base(), maxPostsPerHour: 30, minIntervalMinutes: 1 };
+    expect(paceRiskCovered(fast)).toBe(false);
+    const accepted = { ...fast, paceRiskAccepted: { maxPostsPerHour: 30, minIntervalMinutes: 1, acceptedAt: now.toISOString() } };
+    expect(paceRiskCovered(accepted)).toBe(true);
+    // O aceite cobre aquele ritmo ou um mais calmo, nunca um mais agressivo.
+    expect(paceRiskCovered({ ...accepted, paceRiskAccepted: { maxPostsPerHour: 20, minIntervalMinutes: 1, acceptedAt: now.toISOString() } })).toBe(false);
+  });
+
+  it('a variação aleatória só aumenta o intervalo, dentro do limite escolhido, e é estável', () => {
+    const settings = { ...base(), minIntervalMinutes: 10, intervalJitterPercent: 30 };
+    const last = now.getTime();
+    const wait = effectiveIntervalMs(settings, last);
+    expect(wait).toBeGreaterThanOrEqual(600_000);
+    expect(wait).toBeLessThanOrEqual(780_000);
+    expect(effectiveIntervalMs(settings, last)).toBe(wait);
+    expect(effectiveIntervalMs({ ...settings, intervalJitterPercent: 0 }, last)).toBe(600_000);
   });
 });

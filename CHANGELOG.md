@@ -1,5 +1,12 @@
 # Alterações
 
+## Aviso de uso do WhatsApp e ritmo de envio
+
+- Antes de qualquer coisa, o painel mostra um aviso obrigatório: usar um número alternativo, risco de restrição/banimento, ritmo por conta da pessoa e grupos com consentimento. Só libera depois de marcar os 4 itens; o aceite fica salvo com a versão do texto (`RISK_NOTICE_VERSION`).
+- Sem aceite, nenhuma publicação sai, também no worker local (checado em `evaluatePublication`).
+- Ritmo de envio escolhido pela pessoa em Automação: presets (Cuidadoso, Equilibrado, Rápido), valores livres, medidor de risco e variação aleatória do intervalo (padrão +30%) para não parecer robô. Ritmo de alto risco exige confirmar "Assumo o risco deste ritmo"; sem isso, as publicações ficam pausadas.
+- Base para a API oficial: contrato `MessagingTransport` em `packages/shared/src/messaging.ts`; o motor atual declara `provider: 'whatsapp-qr'`. Plano em `docs/WHATSAPP-API-OFICIAL.md`.
+
 ## Recuperação de conta sem e-mail
 
 - Cadastro com senha digitada duas vezes e 3 perguntas de segurança; respostas ignoram maiúsculas, minúsculas e acentos.

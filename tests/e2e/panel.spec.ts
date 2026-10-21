@@ -1,4 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { acceptRiskNoticeWhenShown } from './risk-notice.ts';
+
+test.beforeEach(async ({ page }) => { await acceptRiskNoticeWhenShown(page); });
 
 test('salva preferências pela interface e recupera após recarregar', async ({ page }, testInfo) => {
   const errors:string[]=[];

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Activity, ArrowRight, ArrowUpRight, BadgeCheck, Bell, Check, CheckCheck, ChevronDown, ChevronRight, CircleHelp, Coffee, Heart, LayoutDashboard, Leaf, Link2, ListChecks, LoaderCircle, Menu, MessageCircle, MessageSquareText, Pause, Play, Plus, QrCode, RefreshCw, Settings2, ShieldCheck, ShoppingBag, Sparkles, Store, Users, Wifi, X, Zap, type LucideIcon } from 'lucide-react';
-import { platformIds, type AffiliateConfig, type AppSnapshot, type Offer, type PlatformId, type Settings } from '../../../packages/shared/src/index.ts';
+import { platformIds, riskNoticeAccepted, type AffiliateConfig, type AppSnapshot, type Offer, type PlatformId, type Settings } from '../../../packages/shared/src/index.ts';
+import { RiskNoticeGate, acceptedRiskNotice } from './RiskNotice.tsx';
 import { api, initialize, isDemonstration } from './api.ts';
 import { useAccount } from './AccountGate.tsx';
 import { OfferDetail, OfferRow, OffersPage } from './Offers.tsx';
@@ -96,6 +97,10 @@ export default function App() {
     try { const data = await api.get<unknown>('/backup'); const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })); const link = document.createElement('a'); link.href = url; link.download = `promobridge-${isDemonstration() ? 'demo-' : ''}${new Date().toISOString().slice(0, 10)}.json`; link.click(); window.setTimeout(() => URL.revokeObjectURL(url), 1000); notify('Seu backup foi preparado.'); } catch (error) { notify(errorMessage(error), true); }
   }
   if (!snapshot || !draft) return initialError ? <div className="offline-state"><div className="offline-card"><span className="brand-mark">p<span>↗</span></span><h1>Vamos nos reconectar<span className="heading-dot">.</span></h1><p>{initialError}</p><div className="notice notice-subtle"><MonitorIcon /><p>O painel local precisa que o aplicativo esteja aberto no seu computador.</p></div><Button icon={RefreshCw} onClick={() => void boot()}>Tentar novamente</Button></div></div> : <Loading />;
+  if (!riskNoticeAccepted(snapshot.settings)) return <RiskNoticeGate onAccept={async () => {
+    const saved = await api.put<Settings>('/settings', acceptedRiskNotice(snapshot.settings));
+    dirty.current = false; setDraft(structuredClone(saved)); await refresh();
+  }} />;
   const settingsProps: SettingsProps = { snapshot, draft, onChange: change, onSave: save, busy };
   const selected = snapshot.offers.find(offer => offer.id === selectedId);
   const pageLabel = navigation.flatMap(section => section.items).find(item => item.id === page)?.label || 'Hoje';

@@ -1,5 +1,8 @@
 import {test,expect,type Page} from '@playwright/test';
 import {readFileSync} from 'node:fs';
+import {acceptRiskNoticeWhenShown} from './risk-notice.ts';
+
+test.beforeEach(async({page})=>{await acceptRiskNoticeWhenShown(page);});
 
 /** The recovery-code sheet blocks the app until the person downloads or copies the code and confirms. */
 async function saveRecoveryCode(page:Page):Promise<string>{

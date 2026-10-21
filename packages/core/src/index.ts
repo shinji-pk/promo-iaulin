@@ -1,4 +1,5 @@
 import type { Feedback, IngestInput, Offer, Product, Settings, Stage } from '../../shared/src/index.ts';
+import { effectiveIntervalMs, paceRiskCovered, riskNoticeAccepted } from '../../shared/src/index.ts';
 import type { AffiliatePort } from '../../shared/src/features.ts';
 import { buildAffiliateLink, identifyPlatform, identifyProduct, validateAffiliateLink, validateCalibration } from '../../affiliate-adapters/src/index.ts';
 import { parseSecureUrl } from '../../affiliate-adapters/src/common.ts';
@@ -191,7 +192,10 @@ export function evaluatePublication(offer: Offer, settings: Settings, history: O
   const sentTimes = published.map(item=>validTimestamp(item.publishedAt) ?? validTimestamp(item.updatedAt)).filter((value):value is number=>value !== null);
   const hourStart = now.getTime()-3_600_000;
   if (!options.ignoreTemporary && sentTimes.filter(time=>time >= hourStart).length >= settings.maxPostsPerHour) reasons.push('Limite de publicações por hora atingido.');
-  if (!options.ignoreTemporary && sentTimes.some(time=>now.getTime()-time < settings.minIntervalMinutes*60_000)) reasons.push('Intervalo mínimo entre publicações ainda não cumprido.');
+  const lastSent = sentTimes.length ? Math.max(...sentTimes) : null;
+  if (!options.ignoreTemporary && lastSent !== null && now.getTime()-lastSent < effectiveIntervalMs(settings,lastSent)) reasons.push('Intervalo mínimo entre publicações ainda não cumprido.');
+  if (!riskNoticeAccepted(settings)) reasons.push('Aceite o aviso sobre o uso do WhatsApp (número alternativo) antes de publicar.');
+  if (!paceRiskCovered(settings)) reasons.push('O ritmo de envio escolhido é de alto risco: confirme em Configurações que assume esse risco ou escolha um ritmo mais calmo.');
   return {allowed:reasons.length === 0,reasons:[...new Set(reasons)]};
 }
 

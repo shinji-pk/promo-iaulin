@@ -7,6 +7,7 @@ import makeWASocket, {
 import pino from 'pino';
 import QRCode from 'qrcode';
 import type { IngestInput, Settings, WhatsAppGroup, WhatsAppStatus } from '../../../packages/shared/src/index.ts';
+import type { MessagingTransport } from '../../../packages/shared/src/messaging.ts';
 import { readJpegThumbnail } from './jpeg-thumbnail.ts';
 
 const MAX_TEXT = 16_000;
@@ -110,7 +111,8 @@ export interface WhatsAppOptions {
 }
 
 /** A persistent local client, started exclusively by an explicit connect action. */
-export class WhatsAppService {
+export class WhatsAppService implements MessagingTransport {
+  readonly provider = 'whatsapp-qr' as const;
   private readonly options: WhatsAppOptions;
   private readonly authDir: string;
   private status: WhatsAppStatus = { connected: false, connecting: false, qrDataUrl: null, user: null, groups: [], lastError: null };

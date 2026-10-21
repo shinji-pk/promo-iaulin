@@ -16,8 +16,10 @@ import { RemoteAccess, REMOTE_COOKIE_NAME, type RemoteStatus } from './remote-ac
 import { MediaStore } from './media-store.ts';
 import { scoreOffer } from '../../../packages/scoring/src/index.ts';
 import type { SetupStatus } from '../../../packages/shared/src/features.ts';
+import type { MessagingTransport } from '../../../packages/shared/src/messaging.ts';
 
-export type WhatsAppTransport = Pick<WhatsAppService,'getStatus'|'connect'|'reset'|'refreshGroups'|'sendText'|'stop'> & Partial<Pick<WhatsAppService,'sendImage'|'assertCanSend'>>;
+/** Motor de envio trocável (QR Code hoje, API oficial no futuro). Ver packages/shared/src/messaging.ts. */
+export type WhatsAppTransport = MessagingTransport;
 export interface AppOptions {
   database?: Database;
   databasePath?: string;

@@ -6,7 +6,7 @@ import {afterEach,beforeEach,describe,expect,it,vi} from 'vitest';
 import {createApp,type WhatsAppTransport} from '../apps/worker/src/api.ts';
 import {WhatsAppSendError} from '../apps/worker/src/whatsapp.ts';
 import type {RemoteAccess,RemoteStatus} from '../apps/worker/src/remote-access.ts';
-import {defaultSettings,type Offer,type Settings,type WhatsAppStatus} from '../packages/shared/src/index.ts';
+import {defaultSettings,RISK_NOTICE_VERSION,type Offer,type Settings,type WhatsAppStatus} from '../packages/shared/src/index.ts';
 
 const source='123456@g.us',destination='987654@g.us';
 const amazon='https://www.amazon.com.br/dp/B012345678';
@@ -32,7 +32,7 @@ describe('worker product operations and safe remote API',()=>{
     });
   }
   async function setup(mode:Settings['mode']='manual',paused=false) {
-    const settings=defaultSettings();Object.assign(settings,{sourceGroups:[source],destinationGroup:destination,minScore:0,quietStart:'00:00',quietEnd:'00:00',mode,paused});
+    const settings=defaultSettings();Object.assign(settings,{riskNotice:{version:RISK_NOTICE_VERSION,acceptedAt:'2026-10-18T12:00:00.000Z'},sourceGroups:[source],destinationGroup:destination,minScore:0,quietStart:'00:00',quietEnd:'00:00',mode,paused});
     settings.affiliates.amazon={enabled:true,publicId:'promobridge-20',originalUrl:amazon,affiliateUrl:`${amazon}?tag=promobridge-20`,verifiedAt:null};
     await request('/settings','PUT',settings);
     await request('/affiliates/amazon/calibrate','POST',{enabled:true,publicId:'promobridge-20',originalUrl:amazon,affiliateUrl:`${amazon}?tag=promobridge-20`});
