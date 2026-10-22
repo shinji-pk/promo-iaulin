@@ -17,5 +17,6 @@ export default defineConfig({
     {command:'npx tsx tests/browser-server.ts',url:'http://127.0.0.1:3031/api/v1/health',reuseExistingServer:false,timeout:30000},
     {command:'npx tsx tests/static-browser-server.ts',url:'http://127.0.0.1:4174',reuseExistingServer:false,timeout:30000}
   ],
-  reporter:[['list'],['html',{open:'never'}]]
+  // No GitHub, o relatório 'github' mostra o motivo de cada falha direto no resumo do teste.
+  reporter:process.env.CI ? [['github'],['list'],['html',{open:'never'}]] : [['list'],['html',{open:'never'}]]
 });

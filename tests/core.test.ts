@@ -225,7 +225,8 @@ describe('pipeline, deduplicação e isolamento',()=> {
     const config=settings();
     const prior=await offer({id:'old',sourceMessageId:'other-message',price:400,status:'published',publishedAt:now.toISOString()});
     const next=await offer({id:'new',price:300});
-    expect(evaluatePublication(next,{...config,minIntervalMinutes:1},[{...prior,publishedAt:new Date(now.getTime()-3600000).toISOString()}],now).allowed).toBe(true);
+    // Ritmo calmo (5 min, até 4/h): testa só a regra de preço, sem cair no aceite de ritmo de alto risco.
+    expect(evaluatePublication(next,{...config,minIntervalMinutes:5},[{...prior,publishedAt:new Date(now.getTime()-3600000).toISOString()}],now).allowed).toBe(true);
     expect(evaluatePublication({...next,price:390},config,[prior],now).reasons.join(' ')).toMatch(/repetido/);
     expect(evaluatePublication(next,config,[{...prior,price:null}],now).reasons.join(' ')).toMatch(/repetido/);
     expect(evaluatePublication(next,config,[{...prior,sourceMessageId:next.sourceMessageId}],now).reasons.join(' ')).toMatch(/mensagem/);
