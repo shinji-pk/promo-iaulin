@@ -11,7 +11,7 @@ test('salva preferências pela interface e recupera após recarregar', async ({ 
   const signature=`Escolhas com cuidado · ${testInfo.project.name}`;
   await page.getByLabel('Assinatura das mensagens').fill(signature);
   await page.getByRole('button',{name:'Salvar preferências',exact:true}).click();
-  await expect(page.getByRole('status')).toContainText('Preferências salvas');
+  await expect(page.getByRole('status').filter({hasText:'Preferências salvas'})).toBeVisible();
   await page.reload();
   await expect(page.getByLabel('Assinatura das mensagens')).toHaveValue(signature);
   await page.goto('/#automation');
@@ -19,7 +19,7 @@ test('salva preferências pela interface e recupera após recarregar', async ({ 
   await page.getByLabel('Score mínimo para publicar').press('End');
   await page.getByLabel('Score mínimo para publicar').press('ArrowLeft');
   await page.getByRole('button',{name:'Salvar preferências',exact:true}).click();
-  await expect(page.getByRole('status')).toContainText('Preferências salvas');
+  await expect(page.getByRole('status').filter({hasText:'Preferências salvas'})).toBeVisible();
   await page.reload();
   await expect(page.getByLabel('Score mínimo para publicar')).toHaveValue('99');
   expect(errors).toEqual([]);

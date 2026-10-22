@@ -84,7 +84,7 @@ test('cria conta, salva no servidor, sai, entra e abre o guia flutuante',async({
   const signature=`Grupo de vendas ${testInfo.project.name}`;
   await page.getByLabel('Assinatura das mensagens').fill(signature);
   await page.getByRole('button',{name:'Salvar preferências',exact:true}).click();
-  await expect(page.getByRole('status')).toContainText('Preferências salvas');
+  await expect(page.getByRole('status').filter({hasText:'Preferências salvas'})).toBeVisible();
   await page.reload();await expect(page.getByLabel('Assinatura das mensagens')).toHaveValue(signature);
   await page.getByRole('button',{name:'Minha conta',exact:true}).click();
   await page.getByRole('button',{name:'Sair da conta',exact:true}).click();
