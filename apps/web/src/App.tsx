@@ -97,7 +97,8 @@ export default function App() {
     try { const data = await api.get<unknown>('/backup'); const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })); const link = document.createElement('a'); link.href = url; link.download = `promobridge-${isDemonstration() ? 'demo-' : ''}${new Date().toISOString().slice(0, 10)}.json`; link.click(); window.setTimeout(() => URL.revokeObjectURL(url), 1000); notify('Seu backup foi preparado.'); } catch (error) { notify(errorMessage(error), true); }
   }
   if (!snapshot || !draft) return initialError ? <div className="offline-state"><div className="offline-card"><span className="brand-mark">p<span>↗</span></span><h1>Vamos nos reconectar<span className="heading-dot">.</span></h1><p>{initialError}</p><div className="notice notice-subtle"><MonitorIcon /><p>O painel local precisa que o aplicativo esteja aberto no seu computador.</p></div><Button icon={RefreshCw} onClick={() => void boot()}>Tentar novamente</Button></div></div> : <Loading />;
-  if (!riskNoticeAccepted(snapshot.settings)) return <RiskNoticeGate onAccept={async () => {
+  // Uma janela bloqueante por vez: se a conta está mostrando o código de recuperação (ou outra janela), o aviso aparece logo depois.
+  if (!riskNoticeAccepted(snapshot.settings)) return account.dialogOpen ? null : <RiskNoticeGate onAccept={async () => {
     const saved = await api.put<Settings>('/settings', acceptedRiskNotice(snapshot.settings));
     dirty.current = false; setDraft(structuredClone(saved)); await refresh();
   }} />;
