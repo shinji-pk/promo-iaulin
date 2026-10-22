@@ -81,7 +81,7 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
     try {
       if(!validOrigin(req)){res.status(403).json({error:'Origem não autorizada.'});return;}
       if(!req.is('application/json')){res.status(415).json({error:'Envie dados JSON.'});return;}
-      const parsed=z.object({email:z.email().max(254),newPassword:z.string().min(12).max(128),confirmPassword:z.string().min(12).max(128),
+      const parsed=z.object({email:z.email().max(254),newPassword:z.string().min(6).max(128),confirmPassword:z.string().min(6).max(128),
         questions:z.array(z.object({id:z.string().max(100),answer:z.string().max(120)}).strict()).length(3)}).strict().parse(req.body);
       const done=await recovery().reset(parsed.email,parsed.questions,parsed.newPassword,parsed.confirmPassword);
       res.json({reset:true,recoveryCode:done.recoveryCode});
@@ -109,7 +109,7 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
     try {
       if(!validOrigin(req)){res.status(403).json({error:'Origem não autorizada.'});return;}
       if(!req.is('application/json')){res.status(415).json({error:'Envie dados JSON.'});return;}
-      const parsed=z.object({email:z.email().max(254),code:z.string().min(1).max(80),newPassword:z.string().min(12).max(128),confirmPassword:z.string().min(12).max(128)}).strict().parse(req.body);
+      const parsed=z.object({email:z.email().max(254),code:z.string().min(1).max(80),newPassword:z.string().min(6).max(128),confirmPassword:z.string().min(6).max(128)}).strict().parse(req.body);
       const done=await recovery().resetWithCode(parsed.email,parsed.code,parsed.newPassword,parsed.confirmPassword);
       res.json({reset:true,recoveryCode:done.recoveryCode});
     } catch(error){
@@ -148,7 +148,7 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
     const result=await auth().api.updateUser({headers:fromNodeHeaders(req.headers),body:fields});res.json(result);
   });
   app.post('/api/v1/account/password',async(req,res)=>{
-    const parsed=z.object({currentPassword:z.string().min(1).max(128),newPassword:z.string().min(12).max(128),confirmPassword:z.string().min(12).max(128)}).strict().parse(req.body);
+    const parsed=z.object({currentPassword:z.string().min(1).max(128),newPassword:z.string().min(6).max(128),confirmPassword:z.string().min(6).max(128)}).strict().parse(req.body);
     if(parsed.newPassword!==parsed.confirmPassword){res.status(400).json({error:'As novas senhas não conferem.'});return;}
     const result=await auth().api.changePassword({headers:fromNodeHeaders(req.headers),body:{currentPassword:parsed.currentPassword,newPassword:parsed.newPassword,revokeOtherSessions:true},returnHeaders:true});
     for(const cookie of result.headers.getSetCookie())res.append('Set-Cookie',cookie);

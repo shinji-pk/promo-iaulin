@@ -47,7 +47,7 @@ As configurações e a sessão persistem entre reinicializações. **Fechar o si
 
 Em **https://iaulinbot.vercel.app**, use **Criar conta** ou **Entrar**. Este é o endereço recomendado para novos acessos; contas antigas de outro projeto Vercel não são migradas automaticamente. Nome, e-mail, preferências, simulações e o último estado sincronizado ficam no armazenamento privado do servidor, separados por usuário. Sair ou trocar de navegador não apaga esses dados. A conta não usa localStorage como banco.
 
-A senha tem pelo menos 12 caracteres; o painel permite alterá-la e sair.
+A senha tem pelo menos 6 caracteres; o painel permite alterá-la e sair.
 
 **Recuperar a senha sem e-mail.** Ao criar a conta, a pessoa digita a senha duas vezes, escolhe **3 perguntas de segurança** e recebe um arquivo **`.txt` com um código de recuperação**. Se esquecer a senha, em **Esqueci minha senha** ela usa um dos dois caminhos:
 

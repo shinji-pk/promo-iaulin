@@ -148,7 +148,7 @@ describe('recovery code (.txt file): one use, never stored in the clear',()=>{
     for(let i=0;i<9;i++)await service.resetWithCode(email,wrong,next,next).catch(()=>undefined);
     await expect(service.resetWithCode(email,wrong,next,next)).rejects.toMatchObject({status:429});
   });
-  it('requires matching new passwords of at least 12 characters',async()=>{
+  it('requires matching new passwords of at least 6 characters',async()=>{
     const {service,register}=setup();
     const {email,code}=await register();
     await expect(service.resetWithCode(email,code,next,next+'x')).rejects.toMatchObject({status:400,code:'invalid_password'});

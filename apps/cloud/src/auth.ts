@@ -59,7 +59,7 @@ export function createCloudAuth(options: CloudAuthOptions = {}) {
     emailVerification: { sendVerificationEmail:async({user,url})=>{
       await sendEmail(user.email,'Promo IAulin: confirme seu e-mail','Confirme seu e-mail: '+url);
     } },
-    emailAndPassword: { enabled:true,minPasswordLength:12,maxPasswordLength:128,revokeSessionsOnPasswordReset:true,
+    emailAndPassword: { enabled:true,minPasswordLength:6,maxPasswordLength:128,revokeSessionsOnPasswordReset:true,
       resetPasswordTokenExpiresIn:1800,
       sendResetPassword:async({user,url})=>{
         await sendEmail(user.email,'Promo IAulin: recuperar senha','Defina uma nova senha pelo link (30 minutos): '+url);

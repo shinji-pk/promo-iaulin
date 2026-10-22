@@ -142,8 +142,8 @@ export function createSecurityQuestionService(options: {
   function checkNewPassword(email:string,newPassword:string,repeated:string):void {
     if(typeof email!=='string'||email.length>254||!email.includes('@'))
       throw new SecurityQuestionError(400,'invalid_request','Confira os dados de recuperação.');
-    if(typeof newPassword!=='string'||newPassword.length<12||newPassword.length>128||newPassword!==repeated)
-      throw new SecurityQuestionError(400,'invalid_password','Digite duas vezes a mesma senha nova (mínimo 12 caracteres).');
+    if(typeof newPassword!=='string'||newPassword.length<6||newPassword.length>128||newPassword!==repeated)
+      throw new SecurityQuestionError(400,'invalid_password','Digite duas vezes a mesma senha nova (mínimo 6 caracteres).');
   }
 
   /** Same private credential store used by Better Auth: one compare-and-swap write rotates the password and revokes sessions. */
