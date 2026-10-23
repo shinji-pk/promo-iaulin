@@ -14,7 +14,10 @@ async function request<T>(path: string, method = 'GET', body?: unknown): Promise
   const jsonBody = body === undefined && ['POST', 'PUT', 'PATCH'].includes(method) ? {} : body;
   let response: Response;
   try {
-    response = await fetch(`/api/v1${path}`, {
+    const url = new URL(`/api/v1${path}`, window.location.origin);
+    const organizationId = new URLSearchParams(window.location.search).get('organizationId');
+    if (organizationId !== null) url.searchParams.set('organizationId', organizationId);
+    response = await fetch(url.pathname + url.search, {
       method,
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json', ...(csrf ? { 'X-CSRF-Token': csrf } : {}) },
