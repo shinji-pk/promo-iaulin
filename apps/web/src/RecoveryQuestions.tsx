@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { SECURITY_QUESTIONS } from '../../../packages/shared/src/security-questions.ts';
 import { Field } from './ui.tsx';
+import { PasswordInput } from './PasswordInput.tsx';
 
 export interface QuestionAnswer { id:string; answer:string }
 export function readRecoveryQuestions(form:FormData):QuestionAnswer[] {
@@ -23,7 +24,7 @@ export function RecoveryQuestionFields({selected=[]}:{selected?:string[]}) {
         </select>
       </Field>
       <Field label={`Resposta ${index+1}`} hint="Mínimo de 6 caracteres. Maiúsculas, minúsculas e acentos não fazem diferença.">
-        <input name={`answer${index}`} type="password" minLength={6} maxLength={120} autoComplete="off" required/>
+        <PasswordInput name={`answer${index}`} type="password" minLength={6} maxLength={120} autoComplete="off" required/>
       </Field>
     </div>)}
   </div>;
