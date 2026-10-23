@@ -48,7 +48,7 @@ export function LocalSetupWizard({ onClose }: { onClose: () => void }) {
             <div className="install-wizard-file"><Download size={30} /><b>Promo Iaulin</b><span>.exe</span></div>
           </div>
           {mobileDevice ? <p className="install-wizard-alert">Você está pelo celular? Tudo bem! 💜 Abra o site também em um computador com Windows para baixar e instalar o programa. Depois, use este celular para ler o código.</p> : <p className="install-wizard-explanation">Clique no botão abaixo. O navegador vai baixar o programa automaticamente. <b>Você continua aqui no guia.</b></p>}
-          <a className="install-wizard-download" href="/api/v1/download/windows" onClick={() => setDownloadStarted(true)}><Download size={21} /> Baixar Promo Iaulin para Windows</a>
+          <a className="install-wizard-download" href="https://github.com/shinji-pk/promo-iaulin/releases/download/desktop-latest/Promo-Iaulin-Setup.exe" onClick={() => setDownloadStarted(true)}><Download size={21} /> Baixar Promo Iaulin para Windows</a>
           <p className="install-wizard-help-text">{downloadStarted ? 'Ótimo! Veja o download no navegador ou na pasta Downloads. Quando encontrar o arquivo, continue. ✓' : 'É o arquivo Promo-Iaulin-Setup.exe. Não precisa procurar em outro site.'}</p>
         </div>}
 
