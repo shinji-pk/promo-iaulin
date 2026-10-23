@@ -13,6 +13,7 @@ import { getIntegrationGuides } from '../../../packages/shared/src/integration-g
 import { processPromotion } from '../../../packages/core/src/index.ts';
 import { offerSchema } from '../../../packages/db/src/index.ts';
 import { readJpegThumbnail } from '../../worker/src/jpeg-thumbnail.ts';
+import { EMET_ORIGIN, EmetAccessError, hasEmetCookie, ORGANIZATION_ID_PATTERN, verifyEmetAccess } from './emet-access.ts';
 
 export interface AccountData { version:1; settings:Settings; offers:Offer[]; activity:Activity[]; feedbackCount:number; connection:WorkerConnection|null; syncedAt:string|null; }
 export const initialData=():AccountData=>({version:1,settings:defaultSettings(),offers:[],activity:[],feedbackCount:0,connection:null,syncedAt:null});
@@ -31,7 +32,7 @@ async function saveSnapshot(store:JsonDocumentStore<AccountData>,state:AppSnapsh
   await store.transact(draft=>{draft.settings=parsed.settings;draft.offers=parsed.offers.slice(0,3000);draft.activity=parsed.activity.slice(0,300);draft.feedbackCount=parsed.feedbackCount;draft.syncedAt=new Date().toISOString();if(connection)draft.connection=connection;});
 }
 
-export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;storeFor?:(userId:string)=>JsonDocumentStore<AccountData>;requestWorker?:typeof requestWorker;secret?:string;baseURL?:string;managedWorker?:ManagedWorker|null;recoveryService?:ReturnType<typeof createSecurityQuestionService>}={}){
+export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;storeFor?:(userId:string)=>JsonDocumentStore<AccountData>;requestWorker?:typeof requestWorker;secret?:string;baseURL?:string;managedWorker?:ManagedWorker|null;recoveryService?:ReturnType<typeof createSecurityQuestionService>;emetVerifier?:typeof verifyEmetAccess}={}){
   const auth=()=>options.auth??getCloudAuth();
   const storeFor=options.storeFor??accountStore;
   const proxy=options.requestWorker??requestWorker;
@@ -42,6 +43,7 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
   const allowedOrigins=()=>trustedAuthOrigins(options.baseURL??process.env.BETTER_AUTH_URL??'https://promo-iaulin.vercel.app');
   const validOrigin=(req:Request)=>allowedOrigins().includes(req.get('origin')??'');
   const recovery=()=>options.recoveryService??createSecurityQuestionService();
+  const emetVerifier=options.emetVerifier??verifyEmetAccess;
   const validCsrf=(req:Request,sessionId:string)=>{
     const expected=Buffer.from(csrfFor(sessionId)),given=Buffer.from(req.get('x-csrf-token')??'');
     return given.length===expected.length&&timingSafeEqual(given,expected);
@@ -52,6 +54,52 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
   app.get('/api/v1/download/windows',(_req,res)=>res.redirect(302,'https://github.com/shinji-pk/promo-iaulin/releases/download/desktop-latest/Promo-Iaulin-Setup.exe'));
   app.all('/api/auth/{*splat}',(req,res)=>toNodeHandler(auth())(req,res));
   app.use(express.json({limit:'20mb',strict:true}));
+  // Emet membership must be verified for every module request, never guessed from email.
+  app.use('/api/v1',async(req,res,next)=>{
+    const params=new URL(req.originalUrl,'https://promo.shinjiapps.com').searchParams.getAll('organizationId');
+    const cookie=String(req.headers.cookie??'');
+    if(params.length===0&&!hasEmetCookie(cookie)){next();return;}
+    if(params.length!==1||!ORGANIZATION_ID_PATTERN.test(params[0])){
+      res.status(409).json({code:'ORGANIZATION_REQUIRED',error:'Escolha sua empresa no Emet para acessar o Iaulin.'});return;
+    }
+    try{
+      const principal=await emetVerifier({organizationId:params[0],cookie});
+      const storageKey='emet:'+principal.organization.id;
+      res.locals.emet=true;res.locals.user=principal.user;res.locals.emetOrganization=principal.organization;
+      res.locals.session={id:storageKey+':'+principal.user.id};
+      res.locals.storageKey=storageKey;res.locals.store=storeFor(storageKey);
+      // A globally configured WhatsApp worker must not be shared across companies.
+      res.locals.managed=null;
+      if(!['GET','HEAD','OPTIONS'].includes(req.method)){
+        const site=req.get('sec-fetch-site');
+        if(req.get('origin')!==EMET_ORIGIN||(site&&site!=='same-origin'&&site!=='none')||!validCsrf(req,res.locals.session.id)){
+          res.status(403).json({code:'CSRF_REJECTED',error:'Recarregue o módulo Iaulin pelo Emet.'});return;
+        }
+        if(!req.is('application/json')){res.status(415).json({error:'Envie conteúdo JSON.'});return;}
+      }
+      if(req.path==='/account'&&req.method==='GET'){
+        const saved=await (res.locals.store as JsonDocumentStore<AccountData>).read();
+        res.json({mode:'emet',user:{id:principal.user.id,name:principal.user.name,email:principal.user.email},
+          organization:principal.organization,persistence:'company',managed:false,
+          workerConnected:Boolean(saved.connection&&Date.parse(saved.connection.expiresAt)>Date.now()),
+          workerUrl:saved.connection?.origin??null,workerExpiresAt:saved.connection?.expiresAt??null,syncedAt:saved.syncedAt});
+        return;
+      }
+      // Password, profile and recovery are managed only in Emet.
+      if(req.path.startsWith('/account/')){
+        if(req.path==='/account/capabilities'&&req.method==='GET'){res.json({passwordRecovery:false,emailChange:false,emet:true});return;}
+        if(req.path!=='/account/worker'){
+          res.status(409).json({code:'MANAGE_IN_EMET',error:'Gerencie sua conta e recuperação diretamente no Emet.'});return;
+        }
+      }
+      next();
+    }catch(error){
+      if(error instanceof EmetAccessError){
+        res.status(error.status).json({code:error.code,error:error.status===401?'Entre na sua conta no Emet.':error.status===403?'Sua empresa não autorizou o Iaulin.':'Não foi possível confirmar o acesso pelo Emet.'});return;
+      }
+      next(error);
+    }
+  });
   app.get('/api/v1/account/capabilities',(_req,res)=>res.json({passwordRecovery:hasEmailProvider(),emailChange:hasEmailProvider()}));
   app.get('/api/v1/account/security-questions',async(req,res)=>{
     try {
@@ -125,9 +173,10 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
     res.json({mode:'cloud',user:result?{id:result.user.id,name:result.user.name,email:result.user.email,username:result.user.username??'',phone:result.user.phone??'',image:result.user.image??null}:null,persistence:'cloud',managed:Boolean(managed),workerConnected:Boolean(managed)||Boolean(data?.connection&&Date.parse(data.connection.expiresAt)>Date.now()),workerUrl:managed?null:data?.connection?.origin??null,workerExpiresAt:managed?null:data?.connection?.expiresAt??null,syncedAt:data?.syncedAt??null});
   });
   app.use('/api/v1',async(req,res,next)=>{
+    if(res.locals.emet){next();return;}
     const result=await auth().api.getSession({headers:fromNodeHeaders(req.headers)});
     if(!result){res.status(401).json({error:'Entre na sua conta para continuar.',code:'AUTH_REQUIRED'});return;}
-    res.locals.user=result.user;res.locals.session=result.session;res.locals.store=storeFor(result.user.id);
+    res.locals.user=result.user;res.locals.session=result.session;res.locals.store=storeFor(result.user.id);res.locals.storageKey=result.user.id;
     const configured=managedWorker();res.locals.managed=isManagedOwner(configured,result.user.email)?configured:null;
     if(!['GET','HEAD','OPTIONS'].includes(req.method)){
       if(!validOrigin(req)){res.status(403).json({error:'Origem não autorizada.'});return;}
@@ -137,7 +186,7 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
     }
     next();
   });
-  app.get('/api/v1/session',(_req,res)=>res.json({csrfToken:csrfFor(res.locals.session.id),mode:'cloud'}));
+  app.get('/api/v1/session',(_req,res)=>res.json({csrfToken:csrfFor(res.locals.session.id),mode:res.locals.emet?'emet':'cloud'}));
   app.put('/api/v1/account/profile',async(req,res)=>{
     const fields=z.object({
       name:z.string().trim().min(2).max(100),
@@ -162,7 +211,7 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
     const body=JSON.parse(pair.body.toString()) as {csrfToken:string;expiresAt:string};
     const cookie=pair.cookies.map(item=>item.split(';')[0]).find(item=>/^promobridge_remote=[A-Za-z0-9_-]{43}$/.test(item));
     if(!cookie || !/^[a-f0-9]{64}$/.test(body.csrfToken) || !Number.isFinite(Date.parse(body.expiresAt)) || Date.parse(body.expiresAt)<=Date.now() || Date.parse(body.expiresAt)>Date.now()+24*3600000)throw new CloudError(502,'O aplicativo respondeu com um pareamento inválido. Atualize o aplicativo do computador.');
-    const connection:WorkerConnection={origin:parsed.origin,encryptedCookie:sealCookie(cookie,res.locals.user.id),csrf:body.csrfToken,expiresAt:body.expiresAt};
+    const connection:WorkerConnection={origin:parsed.origin,encryptedCookie:sealCookie(cookie,res.locals.storageKey),csrf:body.csrfToken,expiresAt:body.expiresAt};
     if(useSavedSettings){const saved=await store.read();const result=await proxy(connection.origin,'/api/v1/settings',{method:'PUT',body:saved.settings,cookie,csrf:connection.csrf});if(result.status!==200)throw new CloudError(409,'O computador não aceitou suas preferências. Confira a configuração local.');}
     const result=await proxy(connection.origin,'/api/v1/state',{cookie});
     if(result.status!==200)throw new CloudError(502,'Pareamento criado, mas o computador não entregou os dados. Tente novamente.');
@@ -177,8 +226,8 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
     if(!managed&&!paired){res.locals.data=data;next();return;}
     const origin=managed?managed.origin:paired!.origin;
     // The hosted server authenticates with its own secret; a paired computer keeps its encrypted cookie.
-    const reading=()=>managed?{bearer:managed.token}:{cookie:openCookie(paired!.encryptedCookie,res.locals.user.id)};
-    const writing=()=>managed?{bearer:managed.token}:{cookie:openCookie(paired!.encryptedCookie,res.locals.user.id),csrf:paired!.csrf};
+    const reading=()=>managed?{bearer:managed.token}:{cookie:openCookie(paired!.encryptedCookie,res.locals.storageKey)};
+    const writing=()=>managed?{bearer:managed.token}:{cookie:openCookie(paired!.encryptedCookie,res.locals.storageKey),csrf:paired!.csrf};
     // Tunnel control is for a computer; plaintext credential entry never goes through a computer-linked site.
     const credentials=/^\/affiliates\/[^/]+\/credentials/.test(req.path);
     if(/^\/remote(?:\/|$)/.test(req.path)||(credentials&&!managed)){res.status(409).json({error:managed?'O acesso remoto não é necessário: seu servidor já está na nuvem.':'Abra o painel no computador para esta configuração.'});return;}
