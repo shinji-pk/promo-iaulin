@@ -7,7 +7,7 @@ import { LocalSetupButton } from './FeaturePanels.tsx';
 import './account.css';
 import { HELP_EVENT, LoginHelp, type HelpAction } from './HelpMascot.tsx';
 
-interface Account {mode:'cloud';user:{id:string;name:string;email:string;username?:string;phone?:string;image?:string|null}|null;persistence:'cloud';managed?:boolean;workerConnected:boolean;workerUrl?:string|null;workerExpiresAt?:string|null;}
+interface Account {mode:'cloud'|'emet';organization?:{id:string;name:string;role:string};user:{id:string;name:string;email:string;username?:string;phone?:string;image?:string|null}|null;persistence:'cloud';managed?:boolean;workerConnected:boolean;workerUrl?:string|null;workerExpiresAt?:string|null;}
 /** dialogOpen: uma janela da conta (código de recuperação, perguntas, vínculo, Minha conta) está aberta; o app espera para mostrar o próprio aviso bloqueante, uma janela por vez. */
 const AccountContext=createContext<{cloud:boolean;managed:boolean;workerConnected:boolean;user:Account['user'];open:()=>void;dialogOpen:boolean}>({cloud:false,managed:false,workerConnected:false,user:null,open:()=>undefined,dialogOpen:false});
 export const useAccount=()=>useContext(AccountContext);
@@ -38,7 +38,81 @@ function readDesktopPairFromHash():string {
 }
 const desktopPairFromLink=readDesktopPairFromHash();
 
-export function AccountGate({children}:{children:ReactNode}){
+// Emet owns the session and account lifecycle; this module never registers a second user.
+export function AccountGate({children}:{children:ReactNode}) {
+  const query=new URLSearchParams(location.search);
+  const embedded=location.pathname.startsWith('/promo') && location.hostname==='emet.shinjiapps.com';
+  return query.has('organizationId')||embedded ? <EmetAccountGate>{children}</EmetAccountGate> : <LegacyAccountGate>{children}</LegacyAccountGate>;
+}
+
+function EmetAccountGate({children}:{children:ReactNode}) {
+  const org=new URLSearchParams(location.search).get('organizationId')||'';
+  const [account,setAccount]=useState<Account|null|undefined>(undefined);
+  const [error,setError]=useState('');
+  const [panel,setPanel]=useState(false);
+  const [pair,setPair]=useState(desktopPairFromLink);
+  const [pairError,setPairError]=useState('');
+  const [busy,setBusy]=useState(false);
+  const endpoint=(path:string)=>'/api/v1/'+path+'?organizationId='+encodeURIComponent(org);
+  const load=useCallback(async()=>{
+    if(!/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(org)){
+      setAccount(null);setError('Escolha uma empresa na sua conta Emet.');return;
+    }
+    try{
+      const response=await fetch('/api/v1/account?organizationId='+encodeURIComponent(org),{credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(15000)});
+      const data=await response.json();
+      if(!response.ok||data.mode!=='emet'||data.organization?.id!==org||!data.user){
+        setAccount(null);setError(response.status===401?'Entre na sua conta Emet para continuar.':response.status===403?'Sua empresa não tem acesso ao Iaulin.':'Não foi possível confirmar sua conta e empresa.');return;
+      }
+      setAccount(data as Account);setError('');
+    }catch{setAccount(null);setError('Não foi possível consultar sua conta Emet neste momento.');}
+  },[org]);
+  useEffect(()=>{void load();},[load]);
+  useEffect(()=>{
+    const incoming=()=>{const next=readDesktopPairFromHash();if(next){setPair(next);setPairError('');}};
+    window.addEventListener('hashchange',incoming);
+    return()=>window.removeEventListener('hashchange',incoming);
+  },[]);
+  async function confirmPair(){
+    if(!pair||busy)return;
+    setBusy(true);setPairError('');
+    try{
+      const s=await fetch(endpoint('session'),{credentials:'same-origin',cache:'no-store'});
+      if(!s.ok)throw new Error('Sua sessão no Emet expirou. Entre novamente.');
+      const {csrfToken}=await s.json();
+      const response=await fetch(endpoint('account/worker'),{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':csrfToken},body:JSON.stringify({pairingUrl:pair,useSavedSettings:false})});
+      const result=await response.json();
+      if(!response.ok)throw new Error(result.error||'O computador não aceitou o vínculo.');
+      setPair('');await load();
+    }catch(e){setPairError(e instanceof Error?e.message:'Não foi possível conectar o computador.');}
+    finally{setBusy(false);}
+  }
+  if(account===undefined) return <Loading/>;
+  if(!account?.user)return <div className="account-screen"><div className="account-login">
+    <h2>Entre pelo Emet</h2><p>{error||'Sua conta e sua empresa são administradas no Emet.'}</p>
+    <p>Não é necessário criar outra conta ou senha para usar o Iaulin.</p>
+    <a href="/?view=login&module=promo" target="_top" className="emet-button primary">Abrir minha conta Emet</a>
+    <Button variant="ghost" icon={RefreshCw} onClick={()=>void load()}>Verificar novamente</Button>
+  </div></div>;
+  return <AccountContext.Provider value={{cloud:true,managed:false,workerConnected:account.workerConnected,user:account.user,open:()=>setPanel(true),dialogOpen:Boolean(panel||pair)}}>
+    {children}
+    {pair&&<Modal title="Vincular o computador a esta empresa?" subtitle={account.organization?.name||'Empresa no Emet'} onClose={()=>setPair('')}>
+      <p>Confirme somente se você acabou de solicitar o vínculo no aplicativo Windows. O WhatsApp será associado à empresa selecionada.</p>
+      {pairError&&<p role="alert">{pairError}</p>}
+      <div className="modal-footer"><Button variant="ghost" disabled={busy} onClick={()=>setPair('')}>Cancelar</Button><Button disabled={busy} onClick={()=>void confirmPair()}>{busy?'Conectando…':'Confirmar vínculo'}</Button></div>
+    </Modal>}
+    {panel&&<Modal title="Minha conta Emet" subtitle="Uma conta para seus módulos, com dados separados por empresa." onClose={()=>setPanel(false)}>
+      <p><b>{account.user.name}</b></p><p>{account.user.email}</p>
+      <p>Empresa: <b>{account.organization?.name||'Empresa selecionada'}</b></p>
+      <p>{account.workerConnected?'O computador está vinculado a esta empresa.':'Vincule seu aplicativo do WhatsApp a esta empresa para processar ofertas.'}</p>
+      <LocalSetupButton/>
+      <p><a href="/?view=workspace" target="_top">Gerenciar senha, recuperação e empresas no Emet ↗</a></p>
+      <div className="modal-footer"><Button onClick={()=>setPanel(false)}>Concluir</Button></div>
+    </Modal>}
+  </AccountContext.Provider>;
+}
+
+function LegacyAccountGate({children}:{children:ReactNode}){
   const [account,setAccount]=useState<Account|null|undefined>(undefined),[error,setError]=useState(''),[panel,setPanel]=useState(false),[screen,setScreen]=useState<'login'|'signup'|'recovery'|'reset'|'question-recovery'>(new URLSearchParams(location.search).has('token')?'reset':'login'),[busy,setBusy]=useState(false);
   const [token]=useState(()=>{const url=new URL(location.href);const value=url.searchParams.get('token')??'';if(value){url.searchParams.delete('token');url.searchParams.delete('error');history.replaceState(history.state,'',url.pathname+url.search+url.hash);}return value;});
   // Recebe somente o vínculo temporário criado pelo aplicativo Windows (fragmento nunca é enviado como Referer).
