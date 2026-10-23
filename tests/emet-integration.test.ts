@@ -91,6 +91,6 @@ describe('Emet single account and company-isolated Promo backend',()=>{
     const csrf=(await call('/api/v1/session?organizationId='+A)).body.csrfToken;
     expect((await call('/api/v1/settings?organizationId='+A,'PUT',state.settings,
       {Origin:'https://attacker.example','X-CSRF-Token':csrf})).status).toBe(403);
-    expect(backend.documents.size).toBe(1);
+    expect(backend.documents.size).toBe(0);
   });
 });
