@@ -52,6 +52,7 @@ function EmetAccountGate({children}:{children:ReactNode}) {
   const [error,setError]=useState('');
   const [panel,setPanel]=useState(false);
   const [pair,setPair]=useState(desktopPairFromLink);
+  const [manualPair,setManualPair]=useState('');
   const [pairError,setPairError]=useState('');
   const [busy,setBusy]=useState(false);
   const endpoint=(path:string)=>'/api/v1/'+path+'?organizationId='+encodeURIComponent(org);
@@ -106,6 +107,16 @@ function EmetAccountGate({children}:{children:ReactNode}) {
       <p><b>{account.user.name}</b></p><p>{account.user.email}</p>
       <p>Empresa: <b>{account.organization?.name||'Empresa selecionada'}</b></p>
       <p>{account.workerConnected?'O computador está vinculado a esta empresa.':'Vincule seu aplicativo do WhatsApp a esta empresa para processar ofertas.'}</p>
+      {!account.workerConnected&&<div className="pair-input">
+        <Field label="Já tem o aplicativo Windows? Cole aqui o link de pareamento mostrado nele.">
+          <input type="url" value={manualPair} onChange={event=>setManualPair(event.target.value.slice(0,2048))}
+            maxLength={2048} autoComplete="off" spellCheck={false}
+            placeholder="https://seu-computador.../#pair=..." aria-label="Link de pareamento do WhatsApp" />
+        </Field>
+        <Button disabled={!manualPair.trim()||busy} onClick={()=>{setPair(manualPair.trim());setManualPair('');setPairError('');setPanel(false);}}>
+          Vincular WhatsApp a esta empresa
+        </Button>
+      </div>}
       <LocalSetupButton/>
       <p><a href="/?view=workspace" target="_top">Gerenciar senha, recuperação e empresas no Emet ↗</a></p>
       <div className="modal-footer"><Button onClick={()=>setPanel(false)}>Concluir</Button></div>
