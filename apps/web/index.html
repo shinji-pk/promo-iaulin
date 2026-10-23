@@ -10,9 +10,20 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Unbounded:wght@600;700&display=swap" rel="stylesheet" />
+      <style>
+      .shinji-page-footer{display:flex;justify-content:center;align-items:center;gap:18px;flex-wrap:wrap;padding:12px 16px 24px;color:#8c8592;font:400 12px/1.5 system-ui,sans-serif;opacity:.75}
+      .shinji-page-footer a{color:inherit;text-decoration:none}
+      .shinji-page-footer a:hover{text-decoration:underline;opacity:1}
+      .shinji-page-footer a:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+      body:has(.app-footer)>.shinji-page-footer{display:none}
+    </style>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+      <footer class="shinji-page-footer" aria-label="Shinji Apps">
+      <a href="https://www.shinjiapps.com/" target="_blank" rel="noopener noreferrer">shinjiapps.com</a>
+      <a href="https://www.instagram.com/shinjiapps/" target="_blank" rel="noopener noreferrer" aria-label="Instagram da Shinji Apps">@shinjiapps</a>
+    </footer>
   </body>
 </html>
