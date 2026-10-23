@@ -11,7 +11,7 @@ export { SECURITY_QUESTIONS } from '../../../packages/shared/src/security-questi
 // Neither the answers nor the code can be read back. A successful recovery issues a new code.
 
 /** Changing this path starts a fresh recovery database (the previous one is simply no longer read). */
-export const RECOVERY_DOCUMENT_PATH = 'accounts/security-questions-v2.json';
+export const RECOVERY_DOCUMENT_PATH = 'accounts/security-questions-v3.json';
 
 const allowed = new Set<string>(SECURITY_QUESTIONS.map(q => q.id));
 export interface SelectedQuestion { id:string; answer:string }
