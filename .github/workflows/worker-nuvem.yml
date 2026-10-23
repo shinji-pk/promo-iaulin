@@ -30,7 +30,7 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - name: Testar contas e recuperação sem e-mail
-        run: npx vitest run tests/security-questions.test.ts tests/cloud-api.test.ts tests/cloud-auth.test.ts
+        run: npx vitest run tests/security-questions.test.ts tests/cloud-api.test.ts tests/cloud-auth.test.ts tests/emet-integration.test.ts
       - run: npm run test:unit
       - run: npm run test:integration
       - run: npm run build
