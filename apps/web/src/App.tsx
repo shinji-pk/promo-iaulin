@@ -124,7 +124,7 @@ export default function App() {
         {page === 'messages' && <MessagesPage {...settingsProps} />}
         {page === 'health' && <HealthPage snapshot={snapshot} busy={busy} onRefresh={() => void run(refresh, 'Seu painel está atualizado.').catch(() => undefined)} />}
         {page === 'settings' && <GeneralSettingsPage {...settingsProps} onBackup={() => void backup()} onRestore={async data => { await run(async () => { await api.post('/restore', { backup: data }); dirty.current = false; }, 'Backup restaurado.'); }} onCleanup={() => void run(() => api.post('/cleanup', { confirm: true }), 'Dados antigos removidos.').catch(() => undefined)} onOnboard={() => setOnboarding(true)} />}
-        <footer className="app-footer"><span>Feito para conectar boas escolhas.<Heart size={11} /></span><span>Iaulin Bot · v{snapshot.health.version}</span></footer>
+        <footer className="app-footer" style={{ flexWrap: "wrap", gap: 12 }}><span>Feito para conectar boas escolhas.<Heart size={11} /></span><span>Iaulin Bot · v{snapshot.health.version}</span><span style={{ display: "inline-flex", alignItems: "center", gap: 15, fontSize: 12, opacity: .75 }}><a href="https://www.shinjiapps.com/" target="_blank" rel="noopener noreferrer">shinjiapps.com</a><a href="https://www.instagram.com/shinjiapps/" target="_blank" rel="noopener noreferrer" aria-label="Instagram da Shinji Apps">@shinjiapps</a></span></footer>
       </main>
     </div>
     {installGuideOpen && <LocalSetupModal onClose={() => setInstallGuideOpen(false)} />}
