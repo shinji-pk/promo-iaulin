@@ -71,6 +71,11 @@ describe('Emet single account and company-isolated Promo backend',()=>{
     expect(saved.status).toBe(200);
     expect((await call('/api/v1/state?organizationId='+A)).body.settings.sourceGroups).toEqual(['company-a-group']);
     expect((await call('/api/v1/state?organizationId='+B)).body.settings.sourceGroups).not.toContain('company-a-group');
+    // Read-only access to a new company returns defaults without writing anything.
+    expect([...backend.documents.keys()].sort()).toEqual(['emet:'+A]);
+    const csB=(await call('/api/v1/session?organizationId='+B)).body.csrfToken;
+    const settingsB=(await call('/api/v1/state?organizationId='+B)).body.settings;
+    expect((await call('/api/v1/settings?organizationId='+B,'PUT',settingsB,{'X-CSRF-Token':csB})).status).toBe(200);
     expect([...backend.documents.keys()].sort()).toEqual(['emet:'+A,'emet:'+B]);
   });
 
