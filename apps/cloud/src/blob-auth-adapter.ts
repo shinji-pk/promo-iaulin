@@ -6,11 +6,11 @@ type Row = Record<string, unknown>;
 export interface AuthDocument { version: 1; tables: Record<string, Row[]> }
 export const emptyAuthDocument = (): AuthDocument => ({ version: 1, tables: {} });
 /**
- * Where all accounts live. "v2" is the account reset of 2026-10-20: every earlier account (stored at
- * accounts/auth-v1.json) stopped being read, so everyone registers again with the recovery questions and code.
- * The old files stay untouched in private storage until the owner chooses to delete them.
+ * Where all active accounts live. "v3" resets active logins on 2026-10-23 by using a fresh
+ * private document. Earlier v1/v2 documents are retained for backup/auditing but are never
+ * read by this version; every user must register again.
  */
-export const AUTH_DOCUMENT_PATH = 'accounts/auth-v2.json';
+export const AUTH_DOCUMENT_PATH = 'accounts/auth-v3.json';
 
 const clone = <T>(value: T): T => structuredClone(value);
 function validateDocument(document: AuthDocument): void {
