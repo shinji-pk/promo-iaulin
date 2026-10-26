@@ -111,3 +111,10 @@ body { background: var(--blush); font-family: var(--font-body); }
 /* Balões de boas-vindas nunca bloqueiam cliques no que está atrás (só o X é clicável). */
 .mascot-bubble { pointer-events: none; }
 .mascot-bubble > button { pointer-events: auto; }
+
+/* Conta única Emet (26/10/2026): "Criar conta" leva ao Emet; aviso da mudança. */
+.account-tabs > .account-tab-link { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 44px; padding: 12px 8px; border-radius: 10px; font-size: 15px; font-weight: 600; color: #65505e; text-decoration: none; }
+.account-tabs > .account-tab-link:hover { background: #ffffffaa; color: #c2185b; }
+.notice.emet-move { display: flex; flex-direction: column; gap: 12px; margin: -12px 0 22px; padding: 14px 16px; border-radius: 14px; background: #e9fbf8; border: 1px solid #bfeee6; color: #0d4c47; }
+.notice.emet-move p { margin: 0; font-size: 14px; line-height: 1.6; }
+.notice.emet-move .button { align-self: flex-start; text-decoration: none; }

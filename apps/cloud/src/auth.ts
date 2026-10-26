@@ -59,7 +59,9 @@ export function createCloudAuth(options: CloudAuthOptions = {}) {
     emailVerification: { sendVerificationEmail:async({user,url})=>{
       await sendEmail(user.email,'Promo IAulin: confirme seu e-mail','Confirme seu e-mail: '+url);
     } },
-    emailAndPassword: { enabled:true,minPasswordLength:6,maxPasswordLength:128,revokeSessionsOnPasswordReset:true,
+    // New identities are created only in Emet. Set PROMO_LEGACY_SIGNUP_CLOSED=true in production
+    // to refuse new legacy sign-ups while existing legacy accounts keep signing in.
+    emailAndPassword: { enabled:true,disableSignUp:process.env.PROMO_LEGACY_SIGNUP_CLOSED==='true',minPasswordLength:6,maxPasswordLength:128,revokeSessionsOnPasswordReset:true,
       resetPasswordTokenExpiresIn:1800,
       sendResetPassword:async({user,url})=>{
         await sendEmail(user.email,'Promo IAulin: recuperar senha','Defina uma nova senha pelo link (30 minutos): '+url);
