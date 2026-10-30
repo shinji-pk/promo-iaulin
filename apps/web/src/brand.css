@@ -118,3 +118,19 @@ body { background: var(--blush); font-family: var(--font-body); }
 .notice.emet-move { display: flex; flex-direction: column; gap: 12px; margin: -12px 0 22px; padding: 14px 16px; border-radius: 14px; background: #e9fbf8; border: 1px solid #bfeee6; color: #0d4c47; }
 .notice.emet-move p { margin: 0; font-size: 14px; line-height: 1.6; }
 .notice.emet-move .button { align-self: flex-start; text-decoration: none; }
+
+/* Shinji design · Promo / Market Signal: source, price, action. */
+:root{--night:#1C0D23;--plum-brand:#37203F;--flash:#F85672;--offer:#F9804C;--coupon:#FFE18A;--blush:#FFF9FB;--plum:#3B2345;--paper:#FFF9FB;--mauve:#F85672;--cta:linear-gradient(110deg,#F85672,#F9804C)}
+.sidebar{border-right:1px solid #E7DDE5;box-shadow:4px 0 30px rgba(30,10,28,.035)}
+.nav-item.active{box-shadow:inset 3px 0 0 #F85672}
+.metric-card,.offer-card,.panel,.modal{border-radius:16px}
+.offer-card{border-color:#EADCE5}
+.price-current,.coupon{font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1}
+.price-current{letter-spacing:-.04em}
+.hero-panel{position:relative;isolation:isolate}
+.hero-copy h2,.page-intro h1{line-height:1.1;text-wrap:balance;letter-spacing:-.045em!important}
+.button-primary{font-weight:750;box-shadow:0 9px 24px rgba(221,72,100,.15)}
+.account-screen .account-brand,.sidebar-brand{letter-spacing:-.04em}
+input:focus-visible,button:focus-visible,a:focus-visible,select:focus-visible{outline:3px solid #A12661;outline-offset:3px}
+@media(max-width:700px){.metric-card,.offer-card,.panel{border-radius:14px}}
+@media(prefers-reduced-motion:reduce){.mascot *{animation:none!important}}
