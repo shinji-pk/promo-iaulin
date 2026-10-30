@@ -1,0 +1,35 @@
+name: Ofertas | Filtros contextuais
+on:
+  pull_request:
+    paths:
+      - 'apps/web/src/Offers.tsx'
+      - 'apps/web/src/offer-filters.ts'
+      - 'tests/offer-filters.test.ts'
+      - '.github/workflows/offer-filters-pr.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validar-filtros:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Instalar dependencias
+        run: npm ci --no-audit --no-fund
+      - name: Verificar estilo
+        run: npm run lint
+      - name: Verificar tipos
+        run: npm run typecheck
+      - name: Testar filtros
+        run: npx vitest run tests/offer-filters.test.ts
+      - name: Compilar interface
+        run: npm run build:web
