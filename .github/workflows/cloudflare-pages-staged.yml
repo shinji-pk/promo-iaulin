@@ -1,0 +1,77 @@
+name: Cloudflare Pages staged migration
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-shinji-promo-iaulin-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "24"
+      - name: Test and build static preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run typecheck
+          npm test
+          npm run build:web
+          test -d "apps/web/dist"
+
+  deploy:
+    needs: verify
+    if: ${{ github.ref == 'refs/heads/main' && vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    environment: cloudflare-production
+    env:
+      CF_PAGES_PROJECT: shinji-promo-iaulin
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "24"
+      - name: Build reviewed commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run typecheck
+          npm test
+          npm run build:web
+          test -d "apps/web/dist"
+      - name: Ensure Cloudflare Pages project exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx --yes wrangler@4.45.0 pages project list --json > /tmp/pages.json
+          if ! jq -e --arg name "$CF_PAGES_PROJECT" '
+            if type == "array" then any(.[]; .name == $name)
+            elif type == "object" and (.result | type) == "array" then any(.result[]; .name == $name)
+            else error("Unexpected Wrangler project list output")
+            end' /tmp/pages.json > /dev/null; then
+            npx --yes wrangler@4.45.0 pages project create "$CF_PAGES_PROJECT" --production-branch main
+          fi
+      - name: Deploy to Cloudflare Pages (no custom-domain cutover)
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4.45.0 pages deploy "apps/web/dist" --project-name "$CF_PAGES_PROJECT" --branch main
