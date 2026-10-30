@@ -9,13 +9,13 @@ export type Mood = 'happy' | 'think' | 'party' | 'alert';
 const useUid = () => useId().replace(/[^a-zA-Z0-9]/g, '');
 
 export function LogoMark({ size = 34 }: { size?: number }) {
-  const id = 'ibLogo' + useUid();
   return <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
-    <defs><linearGradient id={id} x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#ff4f7b" /><stop offset="1" stopColor="#7a1f6e" /></linearGradient></defs>
-    <rect width="64" height="64" rx="18" fill={`url(#${id})`} />
-    <path d="M12 22c0-4 3-7 7-7h19l14 14v18c0 4-3 7-7 7H19c-4 0-7-3-7-7z" fill="#fff" />
-    <circle cx="43" cy="24" r="3.2" fill="#ff4f7b" />
-    <path d="M22 44L36 30M27 30h9v9" fill="none" stroke="#3b1838" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+    <defs><linearGradient id="promo-mark" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#F85672" /><stop offset="1" stopColor="#7A316A" /></linearGradient></defs>
+    <rect width="64" height="64" rx="16" fill="#1C0D23" />
+    <path d="M12 22a6 6 0 0 1 6-6h22l12 12v20a6 6 0 0 1-6 6H18a6 6 0 0 1-6-6z" fill="url(#promo-mark)" />
+    <circle cx="42" cy="26" r="4.4" fill="#1C0D23" stroke="#FFE18A" strokeWidth="2" />
+    <path d="m20 40 10-9 6 5 8-7" fill="none" stroke="#FFF7F9" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M39 29h5v5" fill="none" stroke="#FFF7F9" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round" />
   </svg>;
 }
 
