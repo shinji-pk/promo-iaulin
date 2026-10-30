@@ -105,8 +105,13 @@ function extractDiscount(text: string, price: number | null, previousPrice: numb
   if (price !== null && previousPrice !== null && previousPrice > price) return Math.round((1 - price / previousPrice) * 100);
   const values: number[] = [];
   for (const match of text.matchAll(/\b(\d{1,3}(?:[.,]\d+)?)\s*%\s*(?:de\s+desconto|off\b|desconto\b)/gi)) {
-    const before = normalize(text.slice(Math.max(0, match.index - 55), match.index));
-    if (negatedBefore(text, match.index) || /(?:\bate|\bmais de|\bcupom(?:\s+de)?|\bganhe(?:\s+ate)?)\s*$/.test(before)) continue;
+    const before = normalize(text.slice(Math.max(0, match.index - 80), match.index));
+    const after = normalize(text.slice(match.index + match[0].length, match.index + match[0].length + 100));
+    // Eligibility cannot be inferred from the message: never promote a conditional
+    // percentage as an unconditional discount. Keep the source text for review.
+    const conditionedBefore = /(?:\b(?:com|mediante)\s+(?:o\s+)?cupom(?:\s+[a-z0-9_-]+)?\s*[:=-]?\s*|\b(?:apenas|somente|exclusiv[oa])\s+(?:no|na|para|com)\s+[a-z0-9_-]+(?:\s+[a-z0-9_-]+){0,2}\s*[:=-]?\s*)$/.test(before);
+    const conditionedAfter = /^\s*(?:[,;:–—-]\s*)?(?:(?:apenas|somente|exclusiv[oa])\s+(?:no|na|para|com)\b|(?:no|pelo)\s+app\b|(?:via|pelo)\s+aplicativo\b|(?:com|mediante)\s+(?:o\s+)?cupom\b|(?:na|a)\s+(?:primeira|segunda)\s+(?:compra|unidade)\b|(?:para|a)\s+(?:novos?\s+(?:clientes?|usuarios?|assinantes?)|assinantes?|membros?\b)|(?:acima|a partir)\s+de\b|(?:em\s+)?compras?\s+(?:acima|a partir)\s+de\b|(?:no|com)\s+cartao\b|sujeit[oa]\s+a\b)/.test(after);
+    if (negatedBefore(text, match.index) || /(?:\bate|\bmais de|\bcupom(?:\s+de)?|\bganhe(?:\s+ate)?)\s*$/.test(before) || conditionedBefore || conditionedAfter) continue;
     const amount = Number(match[1].replace(',', '.'));
     if (amount > 0 && amount < 100) values.push(amount);
   }
