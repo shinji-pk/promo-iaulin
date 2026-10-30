@@ -1,0 +1,103 @@
+# STAGING: merge aprovado nao publica ate a variavel CLOUDFLARE_DEPLOY_ENABLED ser true.
+# promo-iaulin: Frontend apenas; bot WhatsApp e API Express exigem runtime próprio/Workers compatível.
+# Criar secrets de organizacao CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID.
+# O projeto Pages existente com nome igual sera reutilizado; Trilhas nao e tocado.
+name: Cloudflare Pages - CI e publicacao aprovada
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Instalar dependencias
+        run: npm ci --no-audit --no-fund
+      - name: Testes e compilacao
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run lint
+                    npm run typecheck
+                    npm test
+                    npm run build:web
+      - name: Verificar artefato
+        shell: bash
+        run: |
+          test -s "apps/web/dist/index.html"
+          test ! -e "apps/web/dist/.env"
+          test ! -e "apps/web/dist/.env.production"
+
+  deploy:
+    needs: verify
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.CLOUDFLARE_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: cloudflare-production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT || 'shinji-promo-iaulin' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Instalar dependencias
+        run: npm ci --no-audit --no-fund
+      - name: Compilar artefato validado
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run lint
+                    npm run typecheck
+                    npm test
+                    npm run build:web
+      - name: Verificar autorizacao da Cloudflare
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$CLOUDFLARE_API_TOKEN" || -z "$CLOUDFLARE_ACCOUNT_ID" ]]; then
+            echo "::error::Configure os secrets CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID."
+            exit 1
+          fi
+      - name: Reutilizar ou criar projeto Pages com Wrangler
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 pages project list --json > /tmp/cloudflare-projects.json
+          if ! jq -e --arg p "$PAGES_PROJECT" 'if type=="array" then any(.[]; .name==$p) elif (.result|type)=="array" then any(.result[]; .name==$p) else false end' /tmp/cloudflare-projects.json >/dev/null; then
+            npx --yes wrangler@4 pages project create "$PAGES_PROJECT" --production-branch=main
+          fi
+      - name: Publicar usando Wrangler CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 pages deploy "apps/web/dist" --project-name="$PAGES_PROJECT" --branch=main --commit-hash="$GITHUB_SHA"
+      - name: Smoke test da URL Pages (nao altera DNS)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5; do
+            if curl --fail --silent --show-error --max-time 15 --output /tmp/page-check.html "https://$PAGES_PROJECT.pages.dev/"; then
+              grep -Eiq '<(html|!doctype)' /tmp/page-check.html
+              echo "HTTP e HTML OK: https://$PAGES_PROJECT.pages.dev/"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "::error::Deploy realizado, mas smoke test falhou. Nao altere DNS."
+          exit 1
