@@ -8,7 +8,7 @@ afterEach(() => {
 describe('browser API JSON requests', () => {
   it('sends empty JSON for bodyless WhatsApp actions without adding a body to GET', async () => {
     const calls: { url: string; init: RequestInit }[] = [];
-    vi.stubGlobal('window', { location: { hostname: 'localhost' } });
+    vi.stubGlobal('window', { location: { hostname: 'localhost', origin: 'http://localhost:5173', search: '' } });
     vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit) => {
       calls.push({ url, init });
       return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'Content-Type': 'application/json' } });
