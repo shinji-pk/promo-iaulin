@@ -16,7 +16,9 @@ export function LocalSetupWizard({ onClose }: { onClose: () => void }) {
   const [downloadStarted, setDownloadStarted] = useState(false);
   const [phoneType, setPhoneType] = useState<'android' | 'iphone'>('android');
   const [showHelp, setShowHelp] = useState(false);
-  const mobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  // iPadOS pode se identificar como Mac; um .exe só deve ser oferecido a quem não está no celular/tablet.
+  const mobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const info = steps[step];
   const Icon = info.icon;
   const next = () => { setStep(value => Math.min(value + 1, steps.length - 1)); setShowHelp(false); };
@@ -47,9 +49,9 @@ export function LocalSetupWizard({ onClose }: { onClose: () => void }) {
             <div className="install-wizard-computer"><div className="install-wizard-computer-screen"><div className="install-wizard-logo">P<span>↗</span></div><b>Promo Iaulin</b><small>Seu cantinho de ofertas</small></div><div className="install-wizard-computer-neck" /></div>
             <div className="install-wizard-file"><Download size={30} /><b>Promo Iaulin</b><span>.exe</span></div>
           </div>
-          {mobileDevice ? <p className="install-wizard-alert">Você está pelo celular? Tudo bem! 💜 Abra o site também em um computador com Windows para baixar e instalar o programa. Depois, use este celular para ler o código.</p> : <p className="install-wizard-explanation">Clique no botão abaixo. O navegador vai baixar o programa automaticamente. <b>Você continua aqui no guia.</b></p>}
-          <a className="install-wizard-download" href="https://github.com/shinji-pk/promo-iaulin/releases/download/desktop-latest/Promo-Iaulin-Setup.exe" onClick={() => setDownloadStarted(true)}><Download size={21} /> Baixar Promo Iaulin para Windows</a>
-          <p className="install-wizard-help-text">{downloadStarted ? 'Ótimo! Veja o download no navegador ou na pasta Downloads. Quando encontrar o arquivo, continue. ✓' : 'É o arquivo Promo-Iaulin-Setup.exe. Não precisa procurar em outro site.'}</p>
+          {mobileDevice ? <p className="install-wizard-alert" role="status">O instalador .exe funciona no Windows, não neste celular ou tablet. 💜 Abra o site em um computador Windows para baixar e instalar o programa. Depois, use este aparelho para ler o QR Code.</p> : <p className="install-wizard-explanation">Clique no botão abaixo para solicitar o download no navegador. <b>Você continua aqui no guia.</b></p>}
+          {!mobileDevice && <a className="install-wizard-download" href="https://github.com/shinji-pk/promo-iaulin/releases/download/desktop-latest/Promo-Iaulin-Setup.exe" onClick={() => setDownloadStarted(true)}><Download size={21} /> Baixar Promo Iaulin para Windows</a>}
+          {!mobileDevice && <p className="install-wizard-help-text">{downloadStarted ? 'Se o download começou, confira no navegador ou na pasta Downloads. Se falhou, tente novamente antes de continuar.' : 'É o arquivo Promo-Iaulin-Setup.exe, disponível no lançamento oficial do projeto.'}</p>}
         </div>}
 
         {step === 1 && <div className="install-wizard-stage">
