@@ -93,8 +93,9 @@ function extractShipping(text: string): boolean {
   for (const match of text.matchAll(/\b(?:frete\s+(?:gr[aá]tis|gratuito)|envio\s+(?:gr[aá]tis|gratuito)|sem\s+(?:custo\s+de\s+)?frete\b(?!\s+(?:gr[aá]tis|gratuito)\b))\b/gi)) {
     if (negatedBefore(text, match.index)) continue;
     const after = normalize(text.slice(match.index + match[0].length, match.index + match[0].length + 65));
-    // “Frete grátis acima de R$199” is conditional; the parser cannot establish eligibility.
-    if (/^\s*(?:nao|indisponivel|apenas|somente|para|acima|a partir|em compras|com|se\b|nas compras|a depender|sujeito)/.test(after)
+    // A condition on the same advertised benefit is not evidence of free shipping for everyone.
+    // Examples: only in the app, on the first order, or after joining a club.
+    if (/^\s*[:!–—-]?\s*(?:nao\b|indisponivel\b|apenas\b|somente\b|so\b|exclusiv[oa]\b|para\b|acima\b|a partir\b|em (?:compras|pedidos)\b|nas compras\b|com\b|se\b|a depender\b|sujeito\b|mediante\b|na primeira compra\b|no (?:app|aplicativo|clube|programa)\b|pelo (?:app|aplicativo)\b|via (?:app|aplicativo)\b)/.test(after)
       && !/^\s*para\s+tod[oa](?:\s+[oa])?\s+(?:brasil|pais|territorio nacional)\b/.test(after)) continue;
     return true;
   }
