@@ -1,0 +1,32 @@
+name: Installer mobile guard | PR checks
+on:
+  pull_request:
+    paths:
+      - 'apps/web/src/LocalSetupWizard.tsx'
+      - 'tests/setup-wizard.test.ts'
+      - '.github/workflows/installer-mobile-pr.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-installer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Lint changed files
+        run: npx eslint apps/web/src/LocalSetupWizard.tsx tests/setup-wizard.test.ts
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Regression tests (SSR)
+        run: npx vitest run tests/setup-wizard.test.ts
+      - name: Web production build
+        run: npm run build:web
