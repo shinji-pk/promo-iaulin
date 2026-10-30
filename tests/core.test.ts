@@ -114,6 +114,26 @@ describe('extração conservadora e reescrita',()=> {
     expect(parseOffer('Cupom: CASA10\nCupom: OUTRO20').coupon).toBeNull();
     expect(parseOffer('Frete grátis para todo o Brasil').freeShipping).toBe(true);
   });
+  it.each([
+    'Frete grátis no app',
+    'Frete grátis: só no aplicativo',
+    'Frete grátis na primeira compra',
+    'Frete grátis mediante cadastro',
+    'Frete grátis exclusivo para membros',
+    'Frete grátis em pedidos acima de R$ 99',
+    'Envio gratuito no clube',
+    'Envio gratuito via aplicativo',
+  ])('não anuncia frete condicional como gratuito para todos: %s',claim=>{
+    expect(parseOffer(`Air Fryer 4 litros\n${claim}`).freeShipping).toBe(false);
+  });
+  it.each(['Frete grátis','Frete grátis para todo o Brasil','Envio gratuito','Sem custo de frete'])('mantém frete incondicional: %s',claim=>{
+    expect(parseOffer(`Air Fryer 4 litros\n${claim}`).freeShipping).toBe(true);
+  });
+  it('não inclui promessa de frete grátis na mensagem gerada para oferta restrita ao app',async()=>{
+    const [result]=await processPromotion(ingest(`Air Fryer 4 litros\nPor R$ 299,90\nFrete grátis no app\n${original}`),settings(),{resolveUrl});
+    expect(result.freeShipping).toBe(false);
+    expect(renderMessage(result,settings())).not.toContain('Frete grátis informado na oferta');
+  });
   it('mantém claims de cada produto no seu bloco e descarta footer ambíguo',()=> {
     const blocks=parseLinkedOffers(`Air Fryer\nPor R$ 299,90\n${original}\nCupom: PRIME10\nPerfume\nPor R$ 89,90\n${second}`);
     expect(blocks.map(item=>parseOffer(item.text))).toMatchObject([{title:'Air Fryer',price:299.9,coupon:null},{title:'Perfume',price:89.9,coupon:null}]);
