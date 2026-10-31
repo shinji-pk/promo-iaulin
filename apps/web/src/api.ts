@@ -14,7 +14,8 @@ async function request<T>(path: string, method = 'GET', body?: unknown): Promise
   const jsonBody = body === undefined && ['POST', 'PUT', 'PATCH'].includes(method) ? {} : body;
   let response: Response;
   try {
-    const url = new URL(`/api/v1${path}`, window.location.origin);
+    const origin = window.location.origin || 'http://' + (window.location.hostname || 'localhost');
+    const url = new URL(`/api/v1${path}`, origin);
     const organizationId = new URLSearchParams(window.location.search).get('organizationId');
     if (organizationId !== null) url.searchParams.set('organizationId', organizationId);
     response = await fetch(url.pathname + url.search, {
