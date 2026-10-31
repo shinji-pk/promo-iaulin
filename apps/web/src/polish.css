@@ -81,6 +81,27 @@
 .mascot-panel footer a { margin-left: auto; background: #4d2945; color: #fff; }
 @keyframes ux-pop { from { opacity: 0; transform: translateY(10px) scale(.96); } to { opacity: 1; transform: none; } }
 
+/* Barra de busca e IA do mascote */
+.mascot-search-bar { display: flex; align-items: center; gap: 8px; margin: 10px 10px 4px; padding: 7px 12px; border-radius: 999px; background: #f5edf2; border: 1px solid #e7d8e1; color: #5a3c50; transition: border-color .2s, box-shadow .2s; }
+.mascot-search-bar:focus-within { border-color: #a88398; background: #fff; box-shadow: 0 0 0 3px rgba(168,131,152,0.18); }
+.mascot-search-bar input { flex: 1; border: 0; background: transparent; font-size: 13.5px; color: #3c2236; outline: none; padding: 2px 0; }
+.mascot-search-bar input::placeholder { color: #9c8393; }
+.mascot-search-bar button { display: grid; place-items: center; border: 0; background: transparent; color: #88677c; cursor: pointer; padding: 2px; }
+
+.mascot-pills { display: flex; gap: 5px; overflow-x: auto; padding: 4px 10px 8px; scrollbar-width: none; }
+.mascot-pills::-webkit-scrollbar { display: none; }
+.mascot-pill { flex-shrink: 0; border: 0; border-radius: 999px; padding: 4px 9px; background: #f0e6ec; color: #5a3c50; font-size: 11.5px; font-weight: 600; cursor: pointer; transition: background .15s; }
+.mascot-pill:hover { background: #e3d2dc; }
+
+.mascot-answer-box { margin: 8px; padding: 12px 14px; border-radius: 16px; background: #faf3f7; border: 1px solid #ebdce4; display: grid; gap: 8px; animation: ux-pop .2s ease; }
+.mascot-answer-header { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.mascot-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 7px; border-radius: 999px; background: #e7c7db; color: #4d2342; }
+.mascot-answer-text { margin: 0; font-size: 13.5px; line-height: 1.55; color: #442a3e; white-space: pre-line; }
+.mascot-suggestions-title { font-size: 11.5px; font-weight: 700; color: #826678; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.4px; }
+.mascot-suggestions-list { display: grid; gap: 4px; }
+.mascot-suggestion-btn { text-align: left; border: 0; border-radius: 10px; padding: 7px 10px; background: #fff; border: 1px solid #ecdfe6; font-size: 12.5px; color: #4c2f44; cursor: pointer; font-weight: 600; transition: background .15s; }
+.mascot-suggestion-btn:hover { background: #f6edf2; }
+
 /* Ajuda contextual após tentativas de login sem sucesso */
 .login-nudge { display: flex; gap: 10px; align-items: flex-start; margin: 4px 0 14px; padding: 12px 14px; border-radius: 14px; background: #fff5e8; color: #6e4f2a; font-size: 14px; line-height: 1.5; animation: ux-pop .3s var(--ux-ease); }
 .login-nudge p { margin: 0; }
