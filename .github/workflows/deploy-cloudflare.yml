@@ -28,7 +28,7 @@ jobs:
         run: npx vite build --config apps/web/vite.config.ts
 
       - name: Tests (contas, armazenamento e Neon)
-        run: npx vitest run tests/neon-store.test.ts tests/fetch-to-express.test.ts tests/cloud-api.test.ts tests/cloud-auth.test.ts tests/security-questions.test.ts
+        run: npx vitest run --reporter=default --reporter=github-actions tests/neon-store.test.ts tests/fetch-to-express.test.ts tests/cloud-api.test.ts tests/cloud-auth.test.ts tests/security-questions.test.ts
 
       - name: Database and auth secrets for Cloudflare (Neon integration)
         env:
