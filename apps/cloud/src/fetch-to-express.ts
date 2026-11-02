@@ -24,7 +24,8 @@ export async function runExpress(app: ExpressLike, request: Request, maxBody = 2
   if (ip) headers['x-forwarded-for'] = ip;
 
   const socket = Object.assign(new EventEmitter(), { remoteAddress: ip, encrypted: url.protocol === 'https:', readable: true, writable: true });
-  const req = new Readable({ read() {} }) as Readable & Record<string, unknown>;
+  // autoDestroy off: after Express swaps the prototype, IncomingMessage._destroy expects Node internals.
+  const req = new Readable({ read() {}, autoDestroy: false, emitClose: false }) as Readable & Record<string, unknown>;
   if (raw.length) req.push(raw);
   req.push(null);
   Object.assign(req, {
