@@ -1,4 +1,4 @@
-/* global process, console */
+/* global process, console, fetch, URL, Response */
 // Copia contas e espaços de trabalho do Promo do Blob da Vercel para o Neon (tabela promo_docs).
 // Não apaga nada do Blob e não sobrescreve documento que já exista no Neon.
 import { get, list } from '@vercel/blob';
