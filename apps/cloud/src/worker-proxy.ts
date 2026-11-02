@@ -43,6 +43,8 @@ export async function requestWorker(origin:string,path:string,options:{method?:s
   if (url.origin!==origin || !url.pathname.startsWith('/api/v1/') || url.protocol!=='https:' || url.port || url.username || url.password) throw new Error('Endereço do aplicativo inválido.');
   const controller=new AbortController(), deadline=setTimeout(()=>controller.abort(),25000);
   try {
+    // On Cloudflare the edge cannot reach private networks, and node DNS pinning is not available.
+    if(isCloudflareWorkers()) return await fetchOnWorkers(url,options,options.body===undefined?undefined:JSON.stringify(options.body),controller.signal,origin);
     const addresses=await Promise.race([lookup(url.hostname,{all:true,verbatim:true}),new Promise<never>((_,reject)=>controller.signal.addEventListener('abort',()=>reject(new Error('O computador demorou para responder.')),{once:true}))]);
     if(!addresses.length || addresses.length>64 || addresses.some(item=>!isPublicAddress(item.address))) throw new Error('O endereço do computador não aponta para uma rede pública permitida.');
     const address=addresses[0];
@@ -60,4 +62,18 @@ export async function requestWorker(origin:string,path:string,options:{method?:s
       req.end(body);
     });
   } finally {clearTimeout(deadline);}
+}
+
+/** Cloudflare Workers has no raw sockets: same checks, then the platform fetch (never follows redirects). */
+const isCloudflareWorkers=()=>typeof navigator!=='undefined'&&navigator.userAgent==='Cloudflare-Workers';
+async function fetchOnWorkers(url:URL,options:{method?:string;cookie?:string;csrf?:string;bearer?:string},body:string|undefined,signal:AbortSignal,origin:string):Promise<ProxyResponse> {
+  if(body&&Buffer.byteLength(body)>20*1024*1024)throw new Error('Conteúdo maior que o limite permitido.');
+  let response:globalThis.Response;
+  try {
+    response=await fetch(url,{method:options.method??'GET',redirect:'manual',signal,body,
+      headers:{accept:'application/json','accept-encoding':'identity',origin,...(options.bearer?{authorization:`Bearer ${options.bearer}`}:{}),...(options.cookie?{cookie:options.cookie}:{}),...(options.csrf?{'x-csrf-token':options.csrf}:{}),...(body?{'content-type':'application/json'}:{})}});
+  } catch { throw new Error('Não foi possível acessar o computador. Confira se o PromoBridge e o acesso remoto estão ligados.'); }
+  const bytes=Buffer.from(await response.arrayBuffer());
+  if(bytes.length>20*1024*1024)throw new Error('Resposta do computador maior que o limite.');
+  return {status:response.status,body:bytes,contentType:response.headers.get('content-type')??'application/json',cookies:response.headers.getSetCookie?.()??[]};
 }

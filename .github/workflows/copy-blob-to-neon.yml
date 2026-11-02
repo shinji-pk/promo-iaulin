@@ -1,0 +1,23 @@
+name: Copiar contas do Promo para o Neon
+
+on:
+  workflow_dispatch:
+
+jobs:
+  copy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm install --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+      - name: Copiar (não apaga nada do Blob)
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+        run: |
+          export DATABASE_URL=$(curl -fsS -H "Authorization: Bearer $NEON_API_KEY" "https://console.neon.tech/api/v2/projects/shiny-base-07816298/connection_uri?database_name=promo&role_name=promo_owner&pooled=true" | python3 -c "import sys,json;print(json.load(sys.stdin).get('uri',''))")
+          node scripts/copy-blob-to-neon.mjs

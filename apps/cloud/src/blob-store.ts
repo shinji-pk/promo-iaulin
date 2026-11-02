@@ -1,4 +1,5 @@
-import { BlobPreconditionFailedError, get, put } from '@vercel/blob';
+// Loaded only on Vercel: the Cloudflare build never evaluates the Blob SDK.
+const blobSdk = () => import('@vercel/blob');
 
 export class StoreConflictError extends Error {
   constructor() { super('O documento foi atualizado por outra solicitação.'); this.name = 'StoreConflictError'; }
@@ -63,6 +64,7 @@ class VercelBlobBackend implements JsonBackend {
     // Cached reads can resurrect a revoked session or allow an out-of-date uniqueness check.
     // Compression turns the content ETag into a weak representation ETag. It
     // cannot authorize an ifMatch write, so read the identity representation.
+    const { get } = await blobSdk();
     const response = await get(pathname, { access: 'private', useCache: false, headers: { 'accept-encoding': 'identity' } });
     if (!response) return null;
     if (response.statusCode !== 200 || !response.stream || !response.blob.etag || response.blob.etag.startsWith('W/')) throw new Error('Resposta inválida do armazenamento privado.');
@@ -84,6 +86,7 @@ class VercelBlobBackend implements JsonBackend {
   }
 
   async write(pathname: string, value: unknown, expectedEtag: string | null): Promise<void> {
+    const { put, BlobPreconditionFailedError } = await blobSdk();
     try {
       await put(pathname, JSON.stringify(value), {
         access: 'private', addRandomSuffix: false, contentType: 'application/json',
@@ -104,8 +107,56 @@ class VercelBlobBackend implements JsonBackend {
   }
 }
 
+/** Neon (Cloudflare): one row per document, version-based compare-and-swap like Blob ifMatch. */
+type NeonRow = Record<string, string | null>;
+export type NeonSql = (query: string, params?: unknown[]) => Promise<NeonRow[]>;
+export function neonHttp(databaseUrl: string): NeonSql {
+  const host = new URL(databaseUrl).hostname;
+  return async (query, params = []) => {
+    const init = { method: 'POST', headers: { 'content-type': 'application/json', 'Neon-Connection-String': databaseUrl }, body: JSON.stringify({ query, params }) };
+    let response = await fetch(`https://${host.replace(/^[^.]+\./, 'api.')}/sql`, init).catch(() => null);
+    if (!response || (!response.ok && response.status >= 500)) response = await fetch(`https://${host}/sql`, init);
+    const text = await response.text();
+    // Never surface database messages: they can carry connection details.
+    if (!response.ok) throw new Error(`Neon ${response.status}`);
+    try { return (JSON.parse(text) as { rows?: NeonRow[] }).rows ?? []; } catch { return []; }
+  };
+}
+
+export class NeonBackend implements JsonBackend {
+  private ready: Promise<unknown> | null = null;
+  constructor(private readonly sql: NeonSql, private readonly maxBytes: number) {}
+  private ensure() {
+    return this.ready ??= this.sql(`create table if not exists promo_docs (
+      path text primary key, value jsonb not null, version bigint not null default 1,
+      updated_at timestamptz not null default now())`).catch(error => { this.ready = null; throw error; });
+  }
+  async read(pathname: string): Promise<{ etag: string; value: unknown } | null> {
+    await this.ensure();
+    const rows = await this.sql('select value::text as v, version::text as e from promo_docs where path = $1', [pathname]);
+    if (!rows[0]) return null;
+    const body = rows[0].v ?? '';
+    if (Buffer.byteLength(body, 'utf8') > this.maxBytes) throw new Error('Documento excede o limite de armazenamento.');
+    return { etag: 'n' + rows[0].e, value: JSON.parse(body) as unknown };
+  }
+  async write(pathname: string, value: unknown, expectedEtag: string | null): Promise<void> {
+    await this.ensure();
+    const text = JSON.stringify(value);
+    if (expectedEtag !== null && !/^n\d{1,18}$/.test(expectedEtag)) throw new StoreConflictError();
+    const rows = expectedEtag === null
+      ? await this.sql('insert into promo_docs (path, value) values ($1, $2::jsonb) on conflict (path) do nothing returning version', [pathname, text])
+      : await this.sql('update promo_docs set value = $2::jsonb, version = version + 1, updated_at = now() where path = $1 and version = $3::bigint returning version', [pathname, text, expectedEtag.slice(1)]);
+    if (!rows.length) throw new StoreConflictError();
+  }
+}
+
+/** Blob on Vercel; Neon when DATABASE_URL is set and no Blob store is (Cloudflare), or PROMO_STORE=neon. */
+export const useNeonStore = () => Boolean(process.env.DATABASE_URL)
+  && (process.env.PROMO_STORE === 'neon' || (!process.env.BLOB_STORE_ID && !process.env.BLOB_READ_WRITE_TOKEN));
+
 export function createBlobJsonStore<T>(pathname: string, initial: () => T, options: { maxBytes?: number; maxAttempts?: number } = {}): JsonDocumentStore<T> {
-  if (!process.env.BLOB_STORE_ID && !process.env.BLOB_READ_WRITE_TOKEN) throw new Error('Armazenamento de contas não configurado.');
   const maxBytes = options.maxBytes ?? 8 * 1024 * 1024;
+  if (useNeonStore()) return new JsonDocumentStore({ backend: new NeonBackend(neonHttp(process.env.DATABASE_URL!), maxBytes), pathname, initial, ...options });
+  if (!process.env.BLOB_STORE_ID && !process.env.BLOB_READ_WRITE_TOKEN) throw new Error('Armazenamento de contas não configurado.');
   return new JsonDocumentStore({ backend: new VercelBlobBackend(maxBytes), pathname, initial, ...options });
 }

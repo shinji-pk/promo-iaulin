@@ -1,0 +1,9 @@
+name = "promo-iaulin"
+pages_build_output_dir = "apps/web/dist"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# Endereço público da conta. Ao apontar promo.shinjiapps.com para a Cloudflare, trocar aqui.
+BETTER_AUTH_URL = "https://promo-iaulin.pages.dev"
+PROMO_STORE = "neon"

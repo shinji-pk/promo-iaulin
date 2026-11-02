@@ -11,7 +11,7 @@ import { defaultSettings, platformIds, settingsSchema, type Activity, type AppSn
 import { getIntegrationStatuses, identifyProduct } from '../../../packages/affiliate-adapters/src/index.ts';
 import { getIntegrationGuides } from '../../../packages/shared/src/integration-guides.ts';
 import { processPromotion } from '../../../packages/core/src/index.ts';
-import { offerSchema } from '../../../packages/db/src/index.ts';
+import { offerSchema } from '../../../packages/db/src/schema.ts';
 import { readJpegThumbnail } from '../../worker/src/jpeg-thumbnail.ts';
 import { EMET_ORIGIN, EmetAccessError, hasEmetCookie, ORGANIZATION_ID_PATTERN, verifyEmetAccess } from './emet-access.ts';
 

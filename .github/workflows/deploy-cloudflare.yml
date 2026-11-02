@@ -1,4 +1,4 @@
-﻿name: Deploy Promo IAulin to Cloudflare Pages
+name: Deploy Promo IAulin to Cloudflare Pages
 
 on:
   push:
@@ -19,7 +19,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Install dependencies
         run: npm install --legacy-peer-deps
@@ -27,9 +27,43 @@ jobs:
       - name: Build web app
         run: npx vite build --config apps/web/vite.config.ts
 
+      - name: Tests (contas, armazenamento e Neon)
+        run: npx vitest run tests/neon-store.test.ts tests/cloud-api.test.ts tests/cloud-auth.test.ts tests/security-questions.test.ts
+
+      - name: Database and auth secrets for Cloudflare (Neon integration)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DATABASE_URL: ${{ secrets.PROMO_DATABASE_URL }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          BETTER_AUTH_SECRET: ${{ secrets.PROMO_BETTER_AUTH_SECRET }}
+        run: |
+          if [ -z "$DATABASE_URL" ] && [ -n "$NEON_API_KEY" ]; then
+            DATABASE_URL=$(curl -fsS -H "Authorization: Bearer $NEON_API_KEY" "https://console.neon.tech/api/v2/projects/shiny-base-07816298/connection_uri?database_name=promo&role_name=promo_owner&pooled=true" | python3 -c "import sys,json;print(json.load(sys.stdin).get('uri',''))" || true)
+          fi
+          if [ -n "$DATABASE_URL" ]; then
+            printf '%s' "$DATABASE_URL" | npx --yes wrangler@3 pages secret put DATABASE_URL --project-name=promo-iaulin >/dev/null && echo "DATABASE_URL: ok"
+          else
+            echo "::warning::DATABASE_URL indisponível para o Promo na Cloudflare"
+          fi
+          # A mesma chave da Vercel mantém válidas as perguntas de recuperação já cadastradas.
+          if [ -n "$BETTER_AUTH_SECRET" ]; then
+            printf '%s' "$BETTER_AUTH_SECRET" | npx --yes wrangler@3 pages secret put BETTER_AUTH_SECRET --project-name=promo-iaulin >/dev/null && echo "BETTER_AUTH_SECRET: ok"
+          fi
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy apps/web/dist --project-name=promo-iaulin --branch=main
+
+      - name: Verify live API on Cloudflare
+        run: |
+          sleep 20
+          code=$(curl -s -o /tmp/h -w '%{http_code}' https://promo-iaulin.pages.dev/api/auth/get-session)
+          echo "auth -> $code $(head -c 200 /tmp/h)"
+          caps=$(curl -s -o /tmp/c -w '%{http_code}' https://promo-iaulin.pages.dev/api/v1/account/capabilities)
+          echo "capabilities -> $caps $(head -c 200 /tmp/c)"
+          if [ "$caps" = "404" ] || grep -qi '<!doctype' /tmp/c; then echo "::error::API missing on Cloudflare"; exit 1; fi
+          if [ "$code" != "200" ]; then echo "::warning::Promo auth on Cloudflare: $code $(head -c 200 /tmp/h)"; fi
