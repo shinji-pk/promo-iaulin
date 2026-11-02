@@ -57,7 +57,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           # Wrangler 4 usa o http nativo do Workers (Express); o 3 trocava por um stub.
-          wranglerVersion: "4"
+          wranglerVersion: "4.44.0"
           command: pages deploy apps/web/dist --project-name=promo-iaulin --branch=main
 
       - name: Verify live API on Cloudflare
