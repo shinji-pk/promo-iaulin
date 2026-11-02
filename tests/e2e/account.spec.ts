@@ -56,6 +56,15 @@ test('cria conta, salva no servidor, sai, entra e abre o guia flutuante',async({
   // A pessoa usa o computador como servidor; a configuração da Render não deve ser exigida.
   await page.goto('http://127.0.0.1:3032/#today');
   await page.getByRole('button',{name:'Ver como ativar'}).click();
+  // Primeiro a pessoa escolhe onde o Promo fica ligado; as duas opções aparecem.
+  const placeChoice=page.getByRole('dialog',{name:'Onde o Promo Iaulin vai ficar ligado?'});
+  await expect(placeChoice).toBeVisible();
+  await placeChoice.getByRole('button',{name:/Num servidor meu/}).click();
+  const serverSetup=page.getByRole('dialog',{name:'Conectar meu servidor'});
+  await expect(serverSetup.getByLabel(/Endereço do servidor/)).toBeVisible();
+  await expect(serverSetup.getByRole('button',{name:'Conectar meu servidor'})).toBeDisabled();
+  await serverSetup.getByRole('button',{name:/Voltar/}).click();
+  await page.getByRole('dialog',{name:'Onde o Promo Iaulin vai ficar ligado?'}).getByRole('button',{name:/No meu computador/}).click();
   const installerGuide=page.getByRole('dialog',{name:'Conecte o WhatsApp sem complicação'});
   await expect(installerGuide).toBeVisible();
   await expect(installerGuide).toContainText('Primeiro, vamos baixar seu aplicativo!');
@@ -72,8 +81,8 @@ test('cria conta, salva no servidor, sai, entra e abre o guia flutuante',async({
   await installerGuide.getByRole('button',{name:'Concluir e aproveitar'}).click();
   await page.goto('http://127.0.0.1:3032/#sources');
   await page.getByRole('button',{name:'Ver passo a passo (5 min)'}).click();
-  await expect(page.getByRole('dialog',{name:'Conecte o WhatsApp sem complicação'})).toBeVisible();
-  await page.getByRole('dialog',{name:'Conecte o WhatsApp sem complicação'}).getByRole('button',{name:'Fechar'}).click();
+  await expect(page.getByRole('dialog',{name:'Onde o Promo Iaulin vai ficar ligado?'})).toBeVisible();
+  await page.getByRole('dialog',{name:'Onde o Promo Iaulin vai ficar ligado?'}).getByRole('button',{name:'Fechar'}).click();
   const pairing='https://only-a-test.trycloudflare.com/#pair='+ 'P'.repeat(43);
   await page.goto('http://127.0.0.1:3032/#worker-pair='+encodeURIComponent(pairing));
   const confirmation=page.getByRole('dialog',{name:'Vincular este computador?'});
