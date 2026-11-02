@@ -4,8 +4,22 @@ import type { LookupFunction } from 'node:net';
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 import { isPublicAddress } from '../../../packages/core/src/resolver.ts';
 
-export interface WorkerConnection { origin:string; encryptedCookie:string; csrf:string; expiresAt:string; }
+/** kind 'computer' = paired desktop app (encrypted session cookie); 'server' = the person's own always-on server (encrypted access key). */
+export interface WorkerConnection { origin:string; encryptedCookie:string; csrf:string; expiresAt:string; kind?:'computer'|'server'; }
 export interface ProxyResponse { status:number; body:Buffer; contentType:string; cookies:string[]; }
+
+/** Address of the person's own server: public HTTPS origin only (no path, query, fragment or credentials). */
+export function parseServerUrl(input:string):string {
+  const value=typeof input==='string'?input.trim().replace(/\/+$/,''):'';
+  if (!value || value.length>2048 || /[\s\\]/u.test(value)) throw new Error('Cole o endereço do seu servidor (começa com https://).');
+  let url:URL;
+  try { url=new URL(value); } catch { throw new Error('Endereço inválido. Ele deve começar com https://'); }
+  const hostname=url.hostname;
+  if (url.protocol!=='https:' || url.username || url.password || url.port || (url.pathname!=='/'&&url.pathname!=='') || url.search || url.hash || !hostname.includes('.') || hostname.endsWith('.') ||
+      !/^[a-z0-9.-]+$/i.test(hostname) || ['localhost','local','internal','test','invalid','example','onion'].some(suffix=>hostname===suffix||hostname.endsWith(`.${suffix}`)))
+    throw new Error('Use o endereço público HTTPS do servidor, sem caminho no final (ex.: https://meu-servidor.onrender.com).');
+  return url.origin;
+}
 
 export function parsePairingUrl(input:string):{origin:string;code:string} {
   if (typeof input!=='string' || input.length>2048 || /[\s\\]/u.test(input)) throw new Error('Cole o link de pareamento gerado no seu computador.');

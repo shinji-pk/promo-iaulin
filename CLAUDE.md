@@ -15,6 +15,7 @@
 ## Servidor na Cloudflare + Neon (02/11/2026)
 - O servidor da conta e dos dados (`apps/cloud`, Express) roda na Cloudflare Pages por `functions/api/[[path]].ts` (`cloudflare:node` + `nodejs_compat`). Na Vercel continua `api/index.js` com o Blob.
 - Armazenamento: `apps/cloud/src/blob-store.ts` usa o **Neon** (tabela `promo_docs`, projeto shinji-promo-iaulin, banco `promo`) quando há `DATABASE_URL` e não há Blob; na Vercel continua o Blob.
-- O WhatsApp (Baileys) precisa de servidor sempre ligado: fica no servidor próprio (Docker/Render, `MANAGED_WORKER_URL`), não na Cloudflare.
-- Para manter válidas as perguntas de recuperação já cadastradas, a Cloudflare precisa da mesma `BETTER_AUTH_SECRET` da Vercel (segredo `PROMO_BETTER_AUTH_SECRET` no GitHub). Sem ele, é usada uma chave derivada do banco.
-- **Só mudar o DNS do Promo para a Cloudflare depois de rodar "Copiar contas do Promo para o Neon"** (precisa do segredo `BLOB_READ_WRITE_TOKEN`) e trocar `BETTER_AUTH_URL` no `wrangler.toml` para o endereço final.
+- O WhatsApp (Baileys) precisa de servidor sempre ligado: roda no computador da pessoa ou num servidor dela (Docker/Render/VPS), nunca na Cloudflare.
+- **Começa do zero (decisão da dona, 02/11/2026):** nenhum dado antigo do Blob é importado. A chave de autenticação na Cloudflare é derivada do banco (ou `PROMO_BETTER_AUTH_SECRET`, se existir).
+- Ao apontar o endereço final para a Cloudflare, trocar `BETTER_AUTH_URL` no `wrangler.toml`.
+- Lugar sempre ligado: cada pessoa escolhe no guia **No meu computador** (programa Windows + pareamento) ou **Num servidor meu** (`POST /api/v1/account/server`: endereço HTTPS + chave `PROMOBRIDGE_CLOUD_TOKEN`, testada antes de salvar e guardada cifrada).

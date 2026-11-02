@@ -5,7 +5,7 @@ import { z, ZodError } from 'zod';
 import { getCloudAuth, hasEmailProvider, trustedAuthOrigins } from './auth.ts';
 import { createSecurityQuestionService, SecurityQuestionError, SECURITY_QUESTIONS } from './security-questions.ts';
 import { createBlobJsonStore, type JsonDocumentStore } from './blob-store.ts';
-import { openCookie, parsePairingUrl, requestWorker, sealCookie, type WorkerConnection } from './worker-proxy.ts';
+import { openCookie, parsePairingUrl, parseServerUrl, requestWorker, sealCookie, type WorkerConnection } from './worker-proxy.ts';
 import { isManagedOwner, managedWorkerFromEnv, type ManagedWorker } from './managed-worker.ts';
 import { defaultSettings, platformIds, settingsSchema, type Activity, type AppSnapshot, type Offer, type Settings } from '../../../packages/shared/src/index.ts';
 import { getIntegrationStatuses, identifyProduct } from '../../../packages/affiliate-adapters/src/index.ts';
@@ -88,7 +88,7 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
       // Password, profile and recovery are managed only in Emet.
       if(req.path.startsWith('/account/')){
         if(req.path==='/account/capabilities'&&req.method==='GET'){res.json({passwordRecovery:false,emailChange:false,emet:true});return;}
-        if(req.path!=='/account/worker'){
+        if(req.path!=='/account/worker'&&req.path!=='/account/server'){
           res.status(409).json({code:'MANAGE_IN_EMET',error:'Gerencie sua conta e recuperação diretamente no Emet.'});return;
         }
       }
@@ -170,7 +170,7 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
     const result=await auth().api.getSession({headers:fromNodeHeaders(req.headers)});
     const data=result?await storeFor(result.user.id).read():null;
     const managed=result&&isManagedOwner(managedWorker(),result.user.email);
-    res.json({mode:'cloud',user:result?{id:result.user.id,name:result.user.name,email:result.user.email,username:result.user.username??'',phone:result.user.phone??'',image:result.user.image??null}:null,persistence:'cloud',managed:Boolean(managed),workerConnected:Boolean(managed)||Boolean(data?.connection&&Date.parse(data.connection.expiresAt)>Date.now()),workerUrl:managed?null:data?.connection?.origin??null,workerExpiresAt:managed?null:data?.connection?.expiresAt??null,syncedAt:data?.syncedAt??null});
+    res.json({mode:'cloud',user:result?{id:result.user.id,name:result.user.name,email:result.user.email,username:result.user.username??'',phone:result.user.phone??'',image:result.user.image??null}:null,persistence:'cloud',managed:Boolean(managed),workerConnected:Boolean(managed)||Boolean(data?.connection&&Date.parse(data.connection.expiresAt)>Date.now()),workerUrl:managed?null:data?.connection?.origin??null,workerExpiresAt:managed?null:data?.connection?.expiresAt??null,workerKind:managed?'server':data?.connection?(data.connection.kind??'computer'):null,syncedAt:data?.syncedAt??null});
   });
   app.use('/api/v1',async(req,res,next)=>{
     if(res.locals.emet){next();return;}
@@ -218,6 +218,22 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
     await saveSnapshot(store,JSON.parse(result.body.toString()) as AppSnapshot,connection);
     res.json({connected:true,origin:connection.origin,expiresAt:connection.expiresAt});
   });
+  // The person's own always-on server (Render, VPS, a home server...). The access key is verified, then stored encrypted.
+  app.post('/api/v1/account/server',async(req,res)=>{
+    const {url,token,useSavedSettings}=z.object({url:z.string().max(2048),token:z.string().min(20).max(200).regex(/^[A-Za-z0-9_\-.~+/=]+$/),useSavedSettings:z.boolean().default(false)}).strict().parse(req.body);
+    let origin:string;
+    try{origin=parseServerUrl(url);}catch(error){throw new CloudError(400,error instanceof Error?error.message:'Endereço inválido.');}
+    const store=res.locals.store as JsonDocumentStore<AccountData>;
+    let state;
+    try{state=await proxy(origin,'/api/v1/state',{bearer:token});}catch{throw new CloudError(502,'Não conseguimos falar com esse servidor. Confira se ele está ligado e se o endereço está certo.');}
+    if([401,403].includes(state.status))throw new CloudError(409,'O servidor respondeu, mas recusou a chave de acesso. Copie a chave de novo no painel do seu servidor.');
+    if(state.status!==200)throw new CloudError(502,'O servidor respondeu de um jeito inesperado. Confira se é o servidor do Promo Iaulin e se está atualizado.');
+    if(useSavedSettings){const saved=await store.read();const result=await proxy(origin,'/api/v1/settings',{method:'PUT',body:saved.settings,bearer:token});if(result.status!==200)throw new CloudError(409,'O servidor não aceitou suas preferências salvas.');}
+    const connection:WorkerConnection={origin,encryptedCookie:sealCookie(token,res.locals.storageKey),csrf:'',expiresAt:new Date(Date.now()+365*24*3600000).toISOString(),kind:'server'};
+    const fresh=useSavedSettings?await proxy(origin,'/api/v1/state',{bearer:token}):state;
+    await saveSnapshot(store,JSON.parse(fresh.body.toString()) as AppSnapshot,connection);
+    res.json({connected:true,kind:'server',workerUrl:origin});
+  });
   app.delete('/api/v1/account/worker',async(_req,res)=>{await(res.locals.store as JsonDocumentStore<AccountData>).transact(draft=>{draft.connection=null;});res.json({connected:false});});
   // Account identity and device administration above always stay in the cloud.
   app.use('/api/v1',async(req,res,next)=>{
@@ -225,12 +241,13 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
     const paired=data.connection&&Date.parse(data.connection.expiresAt)>Date.now()?data.connection:null;
     if(!managed&&!paired){res.locals.data=data;next();return;}
     const origin=managed?managed.origin:paired!.origin;
-    // The hosted server authenticates with its own secret; a paired computer keeps its encrypted cookie.
-    const reading=()=>managed?{bearer:managed.token}:{cookie:openCookie(paired!.encryptedCookie,res.locals.storageKey)};
-    const writing=()=>managed?{bearer:managed.token}:{cookie:openCookie(paired!.encryptedCookie,res.locals.storageKey),csrf:paired!.csrf};
+    const ownServer=!managed&&paired!.kind==='server';
+    // A hosted or own server authenticates with its access key; a paired computer keeps its encrypted cookie.
+    const reading=()=>managed?{bearer:managed.token}:ownServer?{bearer:openCookie(paired!.encryptedCookie,res.locals.storageKey)}:{cookie:openCookie(paired!.encryptedCookie,res.locals.storageKey)};
+    const writing=()=>managed?{bearer:managed.token}:ownServer?{bearer:openCookie(paired!.encryptedCookie,res.locals.storageKey)}:{cookie:openCookie(paired!.encryptedCookie,res.locals.storageKey),csrf:paired!.csrf};
     // Tunnel control is for a computer; plaintext credential entry never goes through a computer-linked site.
     const credentials=/^\/affiliates\/[^/]+\/credentials/.test(req.path);
-    if(/^\/remote(?:\/|$)/.test(req.path)||(credentials&&!managed)){res.status(409).json({error:managed?'O acesso remoto não é necessário: seu servidor já está na nuvem.':'Abra o painel no computador para esta configuração.'});return;}
+    if(/^\/remote(?:\/|$)/.test(req.path)||(credentials&&!managed&&!ownServer)){res.status(409).json({error:managed||ownServer?'O acesso remoto não é necessário: seu servidor já está na nuvem.':'Abra o painel no computador para esta configuração.'});return;}
     try{
       const result=await proxy(origin,`/api/v1${req.url}`,{method:req.method,...(!['GET','HEAD'].includes(req.method)?{body:req.body}:{}),...writing()});
       if([401,403].includes(result.status)){res.locals.data=data;next();return;}
