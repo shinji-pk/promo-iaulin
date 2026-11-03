@@ -149,7 +149,7 @@ export class ChannelService {
   }
 
   // ---------- channels ----------
-  addChannel(input: unknown): Promise<Channel> {
+  async addChannel(input: unknown): Promise<Channel> {
     const parsed = z.object({ reference: z.string().trim().min(1).max(300), purpose: z.enum(channelPurposes).default('editorial') }).strict().parse(input);
     let reference: { jid?: string; invite?: string };
     if (isNewsletterJid(parsed.reference)) reference = { jid: parsed.reference };
@@ -197,7 +197,7 @@ export class ChannelService {
   }
   refreshChannel(id: string): Promise<Channel> { return this.run(() => this.refreshInternal(this.channel(id))); }
 
-  updateChannel(id: string, input: unknown): Promise<Channel> {
+  async updateChannel(id: string, input: unknown): Promise<Channel> {
     const parsed = z.object({ purpose: z.enum(channelPurposes).optional(), active: z.boolean().optional(), settings: channelSettingsSchema.optional(), editorial: editorialProfileSchema.optional() }).strict().parse(input);
     return this.run(() => {
       const channel = this.channel(id);
@@ -225,7 +225,7 @@ export class ChannelService {
       return channel;
     });
   }
-  setGlobalPause(input: unknown): Promise<{ paused: boolean; reason: string | null }> {
+  async setGlobalPause(input: unknown): Promise<{ paused: boolean; reason: string | null }> {
     const parsed = z.object({ paused: z.boolean(), reason: z.string().trim().max(300).optional() }).strict().parse(input);
     return this.run(() => {
       const value = { paused: parsed.paused, reason: parsed.paused ? parsed.reason || 'Pausa geral acionada pela proprietária.' : null };
@@ -278,7 +278,7 @@ export class ChannelService {
     this.applyInput(channel, post, input);
     return post;
   }
-  createPost(channelId: string, input: unknown, origin: 'manual' | 'template' = 'manual'): Promise<ChannelPost> {
+  async createPost(channelId: string, input: unknown, origin: 'manual' | 'template' = 'manual'): Promise<ChannelPost> {
     const parsed = postInputSchema.parse(input);
     return this.run(() => {
       const channel = this.channel(channelId);
@@ -287,7 +287,7 @@ export class ChannelService {
       return post;
     });
   }
-  updatePost(channelId: string, postId: string, input: unknown): Promise<ChannelPost> {
+  async updatePost(channelId: string, postId: string, input: unknown): Promise<ChannelPost> {
     const parsed = postInputSchema.parse(input);
     return this.run(() => {
       const channel = this.channel(channelId), post = this.post(channelId, postId);
@@ -300,7 +300,7 @@ export class ChannelService {
       return post;
     });
   }
-  duplicatePost(channelId: string, postId: string, input: unknown): Promise<ChannelPost> {
+  async duplicatePost(channelId: string, postId: string, input: unknown): Promise<ChannelPost> {
     const parsed = z.object({ targetChannelId: z.string().min(1).max(100).optional() }).strict().parse(input ?? {});
     return this.run(() => {
       const source = this.post(channelId, postId), target = this.channel(parsed.targetChannelId ?? channelId);
@@ -352,7 +352,7 @@ export class ChannelService {
     return [...new Set(reasons)];
   }
 
-  action(channelId: string, postId: string, input: unknown): Promise<ChannelPost> {
+  async action(channelId: string, postId: string, input: unknown): Promise<ChannelPost> {
     const parsed = actionSchema.parse(input);
     return this.run(async () => {
       const channel = this.channel(channelId), post = this.post(channelId, postId), now = this.now();
@@ -604,7 +604,7 @@ export class ChannelService {
 
   // ---------- templates, media, export ----------
   listTemplates(): PostTemplate[] { return this.options.database.listRecords<PostTemplate>('channel-templates'); }
-  saveTemplate(input: unknown, id?: string): Promise<PostTemplate> {
+  async saveTemplate(input: unknown, id?: string): Promise<PostTemplate> {
     const parsed = z.object({ name: z.string().trim().min(1).max(80), content: templateSchema.shape.content }).strict().parse(input);
     return this.run(() => {
       const existing = id ? this.options.database.getRecord<PostTemplate>('channel-templates', id) : undefined;
@@ -617,7 +617,7 @@ export class ChannelService {
     });
   }
   deleteTemplate(id: string) { return this.run(() => { this.options.database.deleteRecord('channel-templates', z.string().min(1).max(100).parse(id)); return { deleted: true as const }; }); }
-  uploadMedia(input: unknown) {
+  async uploadMedia(input: unknown) {
     const parsed = z.object({ kind: z.enum(['image', 'video', 'audio']), name: z.string().max(200).default('arquivo'), base64: z.string().min(16).max(4_300_000) }).strict().parse(input);
     return this.run(() => { try { const record = this.media.save(parsed, this.now()); return { id: record.id, mime: record.mime, bytes: record.bytes, name: record.name, kind: record.kind }; } catch (error) { throw new ChannelError(400, error instanceof Error ? error.message : 'Arquivo inválido.'); } });
   }

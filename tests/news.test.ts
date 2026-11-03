@@ -146,7 +146,7 @@ describe('monitoramento de notícias por canal', () => {
     const aiFetch = vi.fn<AiFetch>(async () => ({ ok: true, status: 200, json: async () => ({ content: [{ type: 'text', text: '{"resumo":"A inflação desacelerou em outubro, segundo a fonte.","titulo":null,"analise":null}' }] }) }));
     const { service } = make(aiFetch);
     const channel = await service.addChannel({ reference: CHANNEL });
-    await service.updateChannel(channel.id, { editorial: { ...defaultEditorialProfile(), enabled: true, keywords: ['inflação'] } });
+    await service.updateChannel(channel.id, { editorial: { ...defaultEditorialProfile(), enabled: true, keywords: ['inflação'], excludedWords: ['patrocinado'] } });
     await service.addSource(channel.id, { url: 'https://a.com/rss', label: 'Fonte A' });
     await service.run(() => service.ai.saveSettings({ provider: 'anthropic', model: 'modelo-escolhido-pela-dona', maxCallsPerDay: 1 }));
     await service.run(() => service.ai.saveKey('chave-propria-da-conta-123456'));
