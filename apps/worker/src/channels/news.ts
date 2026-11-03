@@ -52,7 +52,7 @@ export function scoreNews(entry: Pick<FeedEntry, 'title' | 'summary' | 'categori
   return { relevance, matched: [...new Set(matched)].slice(0, 20), excluded, languageMismatch };
 }
 
-const dateFormat = (value: string | null, timezone: string) => value ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: timezone }).format(new Date(value)) : null;
+const dateFormat = (value: string | null, timezone: string) => value ? `${new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeZone: timezone }).format(new Date(value))} às ${new Intl.DateTimeFormat('pt-BR', { timeStyle: 'short', timeZone: timezone }).format(new Date(value))}` : null;
 const cut = (value: string, max: number) => value.length <= max ? value : `${value.slice(0, max).replace(/\s+\S*$/, '')}…`;
 
 /** A factual draft from the source's own metadata. Dates are labeled separately and never merged. */
@@ -134,14 +134,16 @@ export class NewsService {
           if (stored) repo.updateNews({ ...stored, corroboratingSources: others.size, confirmation: 'corroborated' });
         }
       }
-      const status: NewsItem['status'] = score.excluded ? 'excluded' : score.languageMismatch ? 'irrelevant' : twin ? 'duplicate' : score.relevance >= channel.editorial.minRelevance ? 'new' : 'irrelevant';
+      // A similar headline from another outlet already in the queue is the same story: it corroborates, but is not drafted twice.
+      const sameStory = twin ?? related.find(item => item.status === 'new' || item.status === 'drafted');
+      const status: NewsItem['status'] = score.excluded ? 'excluded' : score.languageMismatch ? 'irrelevant' : score.relevance < channel.editorial.minRelevance ? 'irrelevant' : sameStory ? 'duplicate' : 'new';
       const item: NewsItem = {
         id: randomUUID(), channelId: channel.id, sourceId: source.id, sourceLabel: source.label, sourceDomain: domain,
         url: entry.link, canonicalUrl, guid: entry.guid, title: entry.title.slice(0, 300), excerpt: entry.summary.slice(0, 600),
         author: entry.author, categories: entry.categories, language: entry.language,
         eventDate: null, publishedAt: entry.publishedAt, updatedAt: entry.updatedAt, fetchedAt: now.toISOString(),
         relevance: score.relevance, matched: score.excluded ? [`excluída: ${score.excluded}`] : score.matched, status,
-        duplicateOf: twin?.id ?? null, corroboratingSources: corroborating.size, confirmation: corroborating.size ? 'corroborated' : 'single_source', postId: null,
+        duplicateOf: status === 'duplicate' ? sameStory?.id ?? null : null, corroboratingSources: corroborating.size, confirmation: corroborating.size ? 'corroborated' : 'single_source', postId: null,
       };
       repo.saveNews(item, key);
       if (urlKey !== key && !repo.hasNewsKey(channel.id, urlKey)) repo.saveNews({ ...item, id: randomUUID(), status: 'duplicate', duplicateOf: item.id }, urlKey);

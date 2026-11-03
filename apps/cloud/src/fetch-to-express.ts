@@ -37,7 +37,6 @@ export async function runExpress(app: ExpressLike, request: Request, maxBody = 2
     const out = new Headers();
     const chunks: Buffer[] = [];
     let ended = false;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- duck-typed Node ServerResponse
     const res: any = Object.assign(new EventEmitter(), {
       statusCode: 200, statusMessage: '', headersSent: false, finished: false, writableEnded: false, locals: {},
       socket, connection: socket, req,

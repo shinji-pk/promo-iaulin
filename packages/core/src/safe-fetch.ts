@@ -36,11 +36,8 @@ export function createSafeFetcher(options: SafeFetchOptions = {}) {
         const addresses = family ? [{ address: hostname, family: family as 4 | 6 }] : await lookup(hostname);
         if (!addresses.length || addresses.some(address => isIP(address.address) !== address.family || !isPublicAddress(address.address))) throw new Error('Endereço não público bloqueado.');
         const result = await new Promise<SafeFetchResult & { location?: string }>((resolve, reject) => {
-          let req: ClientRequest | undefined;
-          const onAbort = () => { req?.destroy(); reject(controller.signal.reason instanceof Error ? controller.signal.reason : new Error('Cancelado.')); };
-          if (controller.signal.aborted) { onAbort(); return; }
-          controller.signal.addEventListener('abort', onAbort, { once: true });
-          req = request(url, {
+          if (controller.signal.aborted) { reject(controller.signal.reason instanceof Error ? controller.signal.reason : new Error('Cancelado.')); return; }
+          const req: ClientRequest = request(url, {
             method: 'GET', agent: false, rejectUnauthorized: true, family: addresses[0].family,
             lookup: pinnedLookup(hostname, addresses[0]), maxHeaderSize: 16_384,
             headers: {
@@ -66,6 +63,8 @@ export function createSafeFetcher(options: SafeFetchOptions = {}) {
             response.once('error', error => fail(error));
             response.once('end', () => { if (size <= maxBytes) done({ status, url: url.href, contentType, body: Buffer.concat(chunks), etag: header('etag'), lastModified: header('last-modified') }); });
           });
+          const onAbort = () => { req.destroy(); reject(controller.signal.reason instanceof Error ? controller.signal.reason : new Error('Cancelado.')); };
+          controller.signal.addEventListener('abort', onAbort, { once: true });
           req.once('error', error => { controller.signal.removeEventListener('abort', onAbort); reject(error); });
           req.end();
         });

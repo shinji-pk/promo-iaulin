@@ -222,10 +222,10 @@ export function checkChannelPost(post: Pick<ChannelPost, 'kind' | 'title' | 'sub
   const support = channelContentSupport[post.kind];
   if (!support.supported) errors.push(`${support.detail}`);
   const text = renderChannelPost(post, settings);
-  const media = post.kind === 'image' || post.kind === 'video' || post.kind === 'audio';
-  if (media) {
+  const mediaKind = post.kind === 'image' || post.kind === 'video' || post.kind === 'audio' ? post.kind : null;
+  if (mediaKind) {
     if (!post.mediaId || !post.mediaMime) errors.push('Envie o arquivo de mídia antes de continuar.');
-    else if (!channelMediaMimes[post.kind].includes(post.mediaMime)) errors.push('O arquivo enviado não corresponde ao tipo escolhido. Nada será convertido sem a sua aprovação.');
+    else if (!channelMediaMimes[mediaKind].includes(post.mediaMime)) errors.push('O arquivo enviado não corresponde ao tipo escolhido. Nada será convertido sem a sua aprovação.');
     if ((post.mediaBytes ?? 0) > channelMediaLimits.maxBytes) errors.push('O arquivo passa de 3 MB.');
     if (post.kind === 'audio' && text) errors.push('Áudio em Canal não leva legenda. Publique o texto em uma publicação separada.');
     else if (text.length > MAX_CHANNEL_CAPTION) errors.push(`A legenda tem ${text.length} caracteres; o limite é ${MAX_CHANNEL_CAPTION}.`);

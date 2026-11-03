@@ -113,7 +113,7 @@ export class AiService {
     const fetcher: AiFetch = this.options.fetch ?? ((url, init) => fetch(url, init));
     const signal = AbortSignal.timeout(20_000);
     let response: { ok: boolean; status: number; json(): Promise<unknown> };
-    let text = '';
+    let text: string;
     if (settings.provider === 'anthropic') {
       response = await fetcher('https://api.anthropic.com/v1/messages', { method: 'POST', redirect: 'error', signal, headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: settings.model, max_tokens: 700, system: instructions, messages: [{ role: 'user', content: material }] }) });
       if (!response.ok) throw new Error(`O provedor de IA respondeu com o status ${response.status}.`);

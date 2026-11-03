@@ -230,6 +230,21 @@ describe('cloud account API with real Express, Better Auth and persistent isolat
     expect(JSON.stringify(await backend.read('auth.json'))).not.toContain(nextPassword);
   });
 
+  it('shows Canais only from the account own computer and says plainly when none is connected', async () => {
+    const alice = await register('alice@example.com'), bob = await register('bob@example.com');
+    expect(await (await api('/api/v1/channels', { identity: bob })).json()).toMatchObject({ available: false, channels: [], engine: { connected: false } });
+    await storeFor(alice.id).transact(draft => { draft.connection = { origin: workerOrigin, encryptedCookie: sealCookie(remoteCookie, alice.id), csrf: remoteCsrf, expiresAt: new Date(Date.now() + 60_000).toISOString() }; });
+    proxy.mockResolvedValue(responseJson({ available: true, channels: [{ id: 'canal-da-alice' }] }));
+    expect(await (await api('/api/v1/channels', { identity: alice })).json()).toMatchObject({ available: true, channels: [{ id: 'canal-da-alice' }] });
+    expect(proxy).toHaveBeenLastCalledWith(workerOrigin, '/api/v1/channels', expect.objectContaining({ cookie: remoteCookie }));
+    const calls = proxy.mock.calls.length;
+    expect(await (await api('/api/v1/channels', { identity: bob })).json()).toMatchObject({ available: false, channels: [] });
+    expect(proxy.mock.calls.length).toBe(calls);
+    // A computer-linked site never relays the owner's AI key: it is typed on the computer itself.
+    expect((await api('/api/v1/channels/ai/key', { identity: alice, body: { key: 'k'.repeat(24) } })).status).toBe(409);
+    expect(proxy.mock.calls.length).toBe(calls);
+  });
+
   it('pairs only the authenticated account and encrypts its worker cookie with that account identity', async () => {
     const alice = await register('alice@example.com'), bob = await register('bob@example.com');
     const localState = await state(alice);
