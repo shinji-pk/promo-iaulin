@@ -17,6 +17,11 @@ import { MediaStore } from './media-store.ts';
 import { scoreOffer } from '../../../packages/scoring/src/index.ts';
 import type { SetupStatus } from '../../../packages/shared/src/features.ts';
 import type { MessagingTransport } from '../../../packages/shared/src/messaging.ts';
+import { ChannelService } from './channels/service.ts';
+import { WhatsAppChannelAdapter, type ChannelTransport } from './channels/adapter.ts';
+import { createChannelRouter } from './channels/routes.ts';
+import type { FeedFetcher } from './channels/news.ts';
+import type { AiFetch } from './channels/ai.ts';
 
 /** Motor de envio trocável (QR Code hoje, API oficial no futuro). Ver packages/shared/src/messaging.ts. */
 export type WhatsAppTransport = MessagingTransport;
@@ -36,6 +41,10 @@ export interface AppOptions {
   mediaDirectory?: string;
   /** Hosted mode: the site's server authenticates with this secret instead of a pairing code. */
   cloudToken?: string;
+  /** Canais do WhatsApp: separate transport from groups (tests inject a controlled one). */
+  channelTransport?: ChannelTransport;
+  channelFetcher?: FeedFetcher;
+  aiFetch?: AiFetch;
 }
 class HttpError extends Error { constructor(readonly status:number,message:string) { super(message); } }
 const terminal = new Set(['published','publishing','uncertain','failed','rejected','duplicate','simulated']);
@@ -64,6 +73,7 @@ export class WorkerRuntime {
   readonly affiliates: AffiliateService;
   readonly remote: RemoteAccess;
   readonly media: MediaStore;
+  readonly channels: ChannelService;
   private lifecycleTail:Promise<void> = Promise.resolve();
   private tail: Promise<void> = Promise.resolve();
   private timer: ReturnType<typeof setInterval> | undefined;
@@ -88,8 +98,12 @@ export class WorkerRuntime {
       onMessage:async input => { await this.ingest(input); },
       onEvent:(event,message) => { if (!this.stopped) void this.run(() => this.log(event,message,event.includes('error') ? 'error' : 'info')).catch(() => undefined); }
     });
+    const whatsapp=this.whatsapp;
+    this.channels=new ChannelService({database:this.database,getSettings:()=>this.database.getSettings(),now:this.now,
+      transport:options.channelTransport ?? new WhatsAppChannelAdapter(() => whatsapp instanceof WhatsAppService ? whatsapp.newsletterClient() : null),
+      ...(options.channelFetcher ? {fetcher:options.channelFetcher} : {}),...(options.aiFetch ? {aiFetch:options.aiFetch} : {})});
     if (options.schedule !== false) {
-      this.timer = setInterval(() => { void this.drain().catch(() => undefined); },15000);
+      this.timer = setInterval(() => { void this.drain().catch(() => undefined); void this.channels.tick().catch(() => undefined); },15000);
       this.timer.unref();
     }
   }
@@ -104,7 +118,7 @@ export class WorkerRuntime {
   }
   snapshot(): AppSnapshot {
     const settings = this.database.getSettings();
-    return {settings,offers:this.database.listOffers(1000),integrations:this.affiliates.statuses(),whatsapp:this.whatsapp.getStatus(),activity:this.database.listActivity(),feedbackCount:this.database.listFeedback().length,stats:this.database.stats(),health:{uptime:Math.floor((Date.now()-this.startedAt)/1000),databaseBytes:this.database.databaseBytes(),version:'2.1.0'}};
+    return {settings,offers:this.database.listOffers(1000),integrations:this.affiliates.statuses(),whatsapp:this.whatsapp.getStatus(),activity:this.database.listActivity(),feedbackCount:this.database.listFeedback().length,stats:this.database.stats(),health:{uptime:Math.floor((Date.now()-this.startedAt)/1000),databaseBytes:this.database.databaseBytes(),version:'2.2.0'}};
   }
   async ingest(input:IngestInput):Promise<Offer[]> {
     return this.run(async () => {
@@ -349,7 +363,7 @@ export class WorkerRuntime {
     if (this.stopped) return;
     this.stopped=true;
     if (this.timer) clearInterval(this.timer);
-    await Promise.all([this.tail,this.lifecycleTail]);
+    await Promise.all([this.tail,this.lifecycleTail,this.channels.stop()]);
     try {await this.remote.stop();await this.whatsapp.stop();} finally {this.database.close();}
   }
 }
@@ -499,6 +513,7 @@ export function createApp(options:AppOptions={}):Express & {runtime:WorkerRuntim
   router.get('/backup',(_request,response) => {response.set('Content-Disposition','attachment; filename="promobridge-backup.json"');response.json(runtime.database.backup());});
   router.post('/restore',async (request,response) => {const parsed=z.object({backup:z.unknown()}).strict().parse(request.body);response.json(await runtime.restore(parsed.backup));});
   router.post('/cleanup',async (request,response) => {z.object({confirm:z.literal(true)}).strict().parse(request.body);response.json(await runtime.cleanup());});
+  router.use('/channels',createChannelRouter(runtime.channels,ownerOnly));
   router.use((_request,response) => response.status(404).json({error:'Rota da API não encontrada.'}));
   app.use('/api/v1',router);
   app.use('/api',(_request,response) => response.status(404).json({error:'Use a API versionada /api/v1.'}));

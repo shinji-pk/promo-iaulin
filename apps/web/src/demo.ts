@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { defaultSettings, settingsSchema, categoryIds, platformIds, platformNames, type AppSnapshot, type Offer, type PlatformId } from '../../../packages/shared/src/index.ts';
 import type { ApprovedLink, SetupStatus } from '../../../packages/shared/src/features.ts';
 import { getIntegrationGuides } from '../../../packages/shared/src/integration-guides.ts';
+import { channelContentSupport, type ChannelsOverview } from '../../../packages/shared/src/channels.ts';
 import { identifyPlatform, identifyProduct } from '../../../packages/affiliate-adapters/src/index.ts';
 
 const storageKey = 'promobridge-demonstration-v2';
@@ -49,6 +50,8 @@ function event(message: string) {
 }
 export async function demoRequest(path: string, method: string, body?: any): Promise<unknown> {
   if (path === '/state') return structuredClone(snapshot);
+  if (path === '/channels' && method === 'GET') return { available: false, engine: { provider: 'offline', official: false, connected: false, detail: 'Demonstração: os Canais do WhatsApp funcionam com o seu WhatsApp conectado pelo aplicativo.' }, globalPause: { paused: false, reason: null }, channels: [], content: channelContentSupport } satisfies ChannelsOverview;
+  if (path.startsWith('/channels')) throw new Error('Os Canais do WhatsApp não funcionam na demonstração. Nenhuma publicação real é feita aqui.');
   if (path === '/setup') return {
     ready: false,
     next: 'Você está na demonstração. Abra o aplicativo local para conectar contas e publicar pelo WhatsApp.',

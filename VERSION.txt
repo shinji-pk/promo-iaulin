@@ -1,2 +1,2 @@
-PromoBridge 2.0.0
-Worker local persistente + painel web demonstrativo no Vercel.
+PromoBridge 2.2.0
+Worker persistente + painel web, com Canais do WhatsApp.

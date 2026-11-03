@@ -41,7 +41,7 @@ export class Database {
     this.connection = new DatabaseSync(path);
     this.connection.exec('PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;');
     const version = Number((this.connection.prepare('PRAGMA user_version').get() as {user_version:number}).user_version);
-    if (version > 2) { this.connection.close(); throw new Error('Banco criado por uma versão mais recente.'); }
+    if (version > 3) { this.connection.close(); throw new Error('Banco criado por uma versão mais recente.'); }
     if (version === 0) this.connection.exec(`BEGIN IMMEDIATE;
       CREATE TABLE settings (id INTEGER PRIMARY KEY CHECK(id=1), body TEXT NOT NULL);
       CREATE TABLE offers (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, product_key TEXT NOT NULL, source_message_id TEXT NOT NULL, simulation INTEGER NOT NULL, status TEXT NOT NULL, published_at TEXT, body TEXT NOT NULL);
@@ -61,6 +61,20 @@ export class Database {
       CREATE INDEX offers_platform ON offers(json_extract(body,'$.platform'),created_at DESC,id DESC);
       CREATE INDEX offers_simulation ON offers(simulation,created_at DESC,id DESC);
       PRAGMA user_version=2; COMMIT;`);
+    // v3: Canais do WhatsApp (entidades separadas de grupos e ofertas). Reversão: packages/db/migrations/003-canais.down.sql.
+    if (version < 3) this.connection.exec(`BEGIN IMMEDIATE;
+      CREATE TABLE channels (id TEXT PRIMARY KEY, jid TEXT NOT NULL UNIQUE, active INTEGER NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, body TEXT NOT NULL);
+      CREATE TABLE channel_posts (id TEXT PRIMARY KEY, channel_id TEXT NOT NULL REFERENCES channels(id), status TEXT NOT NULL, scheduled_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, dedupe_key TEXT NOT NULL, body TEXT NOT NULL);
+      CREATE INDEX channel_posts_channel ON channel_posts(channel_id, created_at DESC);
+      CREATE INDEX channel_posts_due ON channel_posts(status, scheduled_at);
+      CREATE UNIQUE INDEX channel_posts_single_send ON channel_posts(channel_id) WHERE status='sending';
+      CREATE TABLE news_sources (id TEXT PRIMARY KEY, channel_id TEXT NOT NULL REFERENCES channels(id), url TEXT NOT NULL, body TEXT NOT NULL, UNIQUE(channel_id,url));
+      CREATE TABLE news_items (id TEXT PRIMARY KEY, channel_id TEXT NOT NULL REFERENCES channels(id), url_key TEXT NOT NULL, fetched_at TEXT NOT NULL, body TEXT NOT NULL, UNIQUE(channel_id,url_key));
+      CREATE INDEX news_items_channel ON news_items(channel_id, fetched_at DESC);
+      CREATE TABLE channel_events (id TEXT PRIMARY KEY, channel_id TEXT, post_id TEXT, created_at TEXT NOT NULL, body TEXT NOT NULL);
+      CREATE INDEX channel_events_created ON channel_events(created_at DESC);
+      CREATE INDEX channel_events_post ON channel_events(post_id, created_at DESC);
+      PRAGMA user_version=3; COMMIT;`);
     if (!this.connection.prepare('SELECT id FROM settings WHERE id=1').get()) this.saveSettings(defaultSettings());
     // A crash after the provider accepted a message cannot safely be retried.
     this.transaction(() => {
@@ -73,6 +87,9 @@ export class Database {
     });
   }
 
+  /** Narrow SQL access for feature repositories that own their tables (e.g. Canais). */
+  sql(statement: string): ReturnType<DatabaseSync['prepare']> { return this.connection.prepare(statement); }
+  schemaVersion(): number { return Number((this.connection.prepare('PRAGMA user_version').get() as {user_version:number}).user_version); }
   transaction<T>(operation: () => T): T {
     this.connection.exec('BEGIN IMMEDIATE');
     try { const result = operation(); this.connection.exec('COMMIT'); return result; }

@@ -100,8 +100,9 @@ describe('persistência e recuperação', () => {
     db.putRecord('affiliate-links','link-1',{url:'https://example.com/product'});
     db.close();
     const inspect=new DatabaseSync(path);
-    expect(inspect.prepare('PRAGMA user_version').get()?.user_version).toBe(2);
-    expect(inspect.prepare("SELECT name FROM sqlite_master WHERE type='index'").all().map(row=>row.name)).toEqual(expect.arrayContaining(['offers_history','offers_platform','offers_simulation','offers_single_claim']));
+    expect(inspect.prepare('PRAGMA user_version').get()?.user_version).toBe(3);
+    expect(inspect.prepare("SELECT name FROM sqlite_master WHERE type='index'").all().map(row=>row.name)).toEqual(expect.arrayContaining(['offers_history','offers_platform','offers_simulation','offers_single_claim','channel_posts_single_send']));
+    expect(inspect.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(row=>row.name)).toEqual(expect.arrayContaining(['channels','channel_posts','news_sources','news_items','channel_events']));
     inspect.close();
     const reopened=database(path);
     expect(reopened.getRecord('affiliate-links','link-1')).toEqual({url:'https://example.com/product'});

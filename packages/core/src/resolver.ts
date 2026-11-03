@@ -68,7 +68,7 @@ export function isPublicAddress(address: string): boolean {
   ] as const).some(([network, prefix]) => value >> BigInt(128 - prefix) === ipv6Number(network) >> BigInt(128 - prefix));
 }
 
-function validateUrl(value: string, maxLength: number): URL {
+export function validateUrl(value: string, maxLength: number): URL {
   // eslint-disable-next-line no-control-regex -- Reject control characters before URL parsing normalizes them.
   if (value.length > maxLength || /[\u0000-\u0020\u007f\\]/u.test(value)) throw new Error('URL inválida ou longa demais.');
   let url: URL;
@@ -99,7 +99,7 @@ function abortable<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
   });
 }
 
-function pinnedLookup(hostname: string, address: ResolvedAddress): LookupFunction {
+export function pinnedLookup(hostname: string, address: ResolvedAddress): LookupFunction {
   return (requestedHost, options, callback) => {
     if (requestedHost.toLowerCase().replace(/\.$/, '') !== hostname) {
       callback(new Error('Hostname da conexão divergente.'), '');

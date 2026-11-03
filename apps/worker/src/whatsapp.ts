@@ -8,6 +8,7 @@ import pino from 'pino';
 import QRCode from 'qrcode';
 import type { IngestInput, Settings, WhatsAppGroup, WhatsAppStatus } from '../../../packages/shared/src/index.ts';
 import type { MessagingTransport } from '../../../packages/shared/src/messaging.ts';
+import { isNewsletterJid } from '../../../packages/shared/src/channels.ts';
 import { readJpegThumbnail } from './jpeg-thumbnail.ts';
 
 const MAX_TEXT = 16_000;
@@ -102,6 +103,19 @@ function normalizedJid(value: string): string {
   return `${user.split(':')[0]}@${server}`;
 }
 
+/**
+ * Narrow access to WhatsApp Channels (newsletters) on the CURRENT socket. It is bound to one
+ * connection generation: if the session changes, every call fails instead of reaching a
+ * different account. Groups never go through this client.
+ */
+export interface NewsletterClient {
+  metadata(type: 'jid' | 'invite', key: string): Promise<unknown>;
+  send(jid: string, content: AnyMessageContent): Promise<{ id: string } | null>;
+  fetchMessages(jid: string, count: number): Promise<unknown>;
+  /** Error reported by WhatsApp for a channel message sent in this session, if any. */
+  deliveryError(jid: string, id: string): string | null;
+}
+
 export interface WhatsAppOptions {
   authDir: string;
   onMessage: (input: IngestInput) => Promise<void>;
@@ -133,6 +147,7 @@ export class WhatsAppService implements MessagingTransport {
   private readonly outgoing = new Map<string, WhatsAppDelivery['status'] | null>();
   private protocolRestarts = 0;
   private qrRevision = 0;
+  private readonly channelOutgoing = new Map<string, string | null>();
 
   constructor(options: WhatsAppOptions) {
     this.options = options;
@@ -221,6 +236,31 @@ export class WhatsAppService implements MessagingTransport {
     await this.assertCanSend(groupId, caption);
     // Never retry as text: even a timeout can mean the image already reached the group.
     return this.send(groupId, { image: jpeg, caption, mimetype: 'image/jpeg', jpegThumbnail: jpeg.toString('base64') });
+  }
+
+  /** Channel access for the separate channel adapter. Null while disconnected. */
+  newsletterClient(): NewsletterClient | null {
+    const socket = this.socket, generation = this.generation;
+    if (!socket || !this.status.connected || !this.desired) return null;
+    const guard = () => {
+      if (!this.active(generation, socket) || !this.status.connected) throw new WhatsAppSendError('A conexão do WhatsApp mudou. Confira o canal antes de continuar.');
+    };
+    return {
+      metadata: async (type, key) => { guard(); return withTimeout(socket.newsletterMetadata(type, key), QUERY_TIMEOUT); },
+      send: async (jid, content) => {
+        guard();
+        // Defense in depth: a channel publication can never be redirected to a group or chat.
+        if (!isNewsletterJid(jid)) throw new WhatsAppSendError('Destino de Canal inválido. Nada foi enviado.');
+        const sent = await withTimeout(socket.sendMessage(jid, content), SEND_TIMEOUT);
+        if (!sent?.key?.id) return null;
+        this.channelOutgoing.set(`${jid}:${sent.key.id}`, null);
+        if (this.channelOutgoing.size > MAX_SEEN) this.channelOutgoing.delete(this.channelOutgoing.keys().next().value!);
+        this.status.lastSentAt = new Date().toISOString();
+        return { id: sent.key.id };
+      },
+      fetchMessages: async (jid, count) => { guard(); return withTimeout(socket.newsletterFetchMessages(jid, count, 0, 0), QUERY_TIMEOUT); },
+      deliveryError: (jid, id) => this.channelOutgoing.get(`${jid}:${id}`) ?? null,
+    };
   }
 
   /** Run before reserving an offer so a local configuration error is not an uncertain delivery. */
@@ -486,6 +526,10 @@ export class WhatsAppService implements MessagingTransport {
         for (const { key, update } of updates) {
           if (!key.fromMe || !key.id || !key.remoteJid) continue;
           const identity = `${key.remoteJid}:${key.id}`;
+          if (this.channelOutgoing.has(identity)) {
+            if (update.status === WAMessageStatus.ERROR) this.channelOutgoing.set(identity, String(update.messageStubParameters?.[0] ?? 'erro informado pelo WhatsApp').slice(0, 200));
+            continue;
+          }
           if (!this.outgoing.has(identity)) continue;
           const status = update.status === WAMessageStatus.ERROR ? 'error'
             : update.status === WAMessageStatus.SERVER_ACK ? 'server_ack'

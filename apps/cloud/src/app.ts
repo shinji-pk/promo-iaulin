@@ -10,6 +10,7 @@ import { isManagedOwner, managedWorkerFromEnv, type ManagedWorker } from './mana
 import { defaultSettings, platformIds, settingsSchema, type Activity, type AppSnapshot, type Offer, type Settings } from '../../../packages/shared/src/index.ts';
 import { getIntegrationStatuses, identifyProduct } from '../../../packages/affiliate-adapters/src/index.ts';
 import { getIntegrationGuides } from '../../../packages/shared/src/integration-guides.ts';
+import { channelContentSupport, type ChannelsOverview } from '../../../packages/shared/src/channels.ts';
 import { processPromotion } from '../../../packages/core/src/index.ts';
 import { offerSchema } from '../../../packages/db/src/schema.ts';
 import { readJpegThumbnail } from '../../worker/src/jpeg-thumbnail.ts';
@@ -25,7 +26,7 @@ function snapshot(data:AccountData,managed=false):AppSnapshot {
   for(const offer of data.offers){if(offer.status==='published')counts.published++;if(['review','approved'].includes(offer.status))counts.review++;if(['blocked','duplicate','failed','uncertain'].includes(offer.status))counts.blocked++;if(offer.simulation)counts.simulated++;}
   return {settings:data.settings,offers:data.offers.slice(0,1000),activity:data.activity,feedbackCount:data.feedbackCount,stats:counts,
     integrations:getIntegrationStatuses(data.settings).map(value=>({...value,state:value.state==='ready'?'degraded':value.state,reason:value.state==='ready'?(managed?'Configuração salva. O servidor do WhatsApp precisa responder para conferir a loja.':'Configuração salva. Conecte o computador para conferir a loja.'):value.reason})),
-    whatsapp:{connected:false,connecting:false,qrDataUrl:null,user:null,groups:[],lastError:managed?'O servidor do WhatsApp não respondeu agora. Seus dados salvos continuam disponíveis; tente de novo em instantes.':data.connection?'O computador está indisponível ou o pareamento expirou. Seus dados salvos continuam disponíveis.':null,diagnostics:[managed?'Preferências salvas na sua conta. O servidor do WhatsApp na nuvem não respondeu; se ele acabou de ser ligado, aguarde alguns minutos.':'Preferências salvas na sua conta. Conecte o computador para capturar e publicar ofertas reais.']},health:{uptime:0,databaseBytes:Buffer.byteLength(JSON.stringify(data)),version:'2.1.0'}};
+    whatsapp:{connected:false,connecting:false,qrDataUrl:null,user:null,groups:[],lastError:managed?'O servidor do WhatsApp não respondeu agora. Seus dados salvos continuam disponíveis; tente de novo em instantes.':data.connection?'O computador está indisponível ou o pareamento expirou. Seus dados salvos continuam disponíveis.':null,diagnostics:[managed?'Preferências salvas na sua conta. O servidor do WhatsApp na nuvem não respondeu; se ele acabou de ser ligado, aguarde alguns minutos.':'Preferências salvas na sua conta. Conecte o computador para capturar e publicar ofertas reais.']},health:{uptime:0,databaseBytes:Buffer.byteLength(JSON.stringify(data)),version:'2.2.0'}};
 }
 async function saveSnapshot(store:JsonDocumentStore<AccountData>,state:AppSnapshot,connection?:WorkerConnection):Promise<void> {
   const parsed=z.object({settings:settingsSchema,offers:z.array(offerSchema).max(50000),activity:z.array(z.object({id:z.string().max(200),createdAt:z.iso.datetime({offset:true}),level:z.enum(['info','warning','error']),event:z.string().max(200),message:z.string().max(3000),offerId:z.string().max(200).optional()}).strict()).max(100000),feedbackCount:z.number().int().min(0)}).parse(state);
@@ -246,7 +247,7 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
     const reading=()=>managed?{bearer:managed.token}:ownServer?{bearer:openCookie(paired!.encryptedCookie,res.locals.storageKey)}:{cookie:openCookie(paired!.encryptedCookie,res.locals.storageKey)};
     const writing=()=>managed?{bearer:managed.token}:ownServer?{bearer:openCookie(paired!.encryptedCookie,res.locals.storageKey)}:{cookie:openCookie(paired!.encryptedCookie,res.locals.storageKey),csrf:paired!.csrf};
     // Tunnel control is for a computer; plaintext credential entry never goes through a computer-linked site.
-    const credentials=/^\/affiliates\/[^/]+\/credentials/.test(req.path);
+    const credentials=/^\/affiliates\/[^/]+\/credentials/.test(req.path)||/^\/channels\/ai\/key$/.test(req.path);
     if(/^\/remote(?:\/|$)/.test(req.path)||(credentials&&!managed&&!ownServer)){res.status(409).json({error:managed||ownServer?'O acesso remoto não é necessário: seu servidor já está na nuvem.':'Abra o painel no computador para esta configuração.'});return;}
     try{
       const result=await proxy(origin,`/api/v1${req.url}`,{method:req.method,...(!['GET','HEAD'].includes(req.method)?{body:req.body}:{}),...writing()});
@@ -258,6 +259,9 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
         res.status(result.status).json(body);return;
       }
       if(/^\/media\/[0-9a-f-]{36}$/i.test(req.path) && result.status===200 && readJpegThumbnail(result.body,'image/jpeg')){res.type('image/jpeg').send(result.body);return;}
+      // Channel post media (preview only): exact allowlisted types, sandboxed, never HTML or scripts.
+      const mediaType=result.contentType.split(';')[0].trim().toLowerCase();
+      if(/^\/channels\/media\/[0-9a-f-]{36}$/i.test(req.path)&&result.status===200&&/^(image\/(jpeg|png|webp)|video\/mp4|audio\/(mpeg|ogg|mp4))$/.test(mediaType)){res.set('Content-Security-Policy',"default-src 'none'; sandbox").type(mediaType).send(result.body);return;}
       res.status(502).json({error:managed?'O servidor respondeu com um formato inesperado. Atualize a hospedagem do WhatsApp.':'O computador respondeu com um formato inesperado. Atualize o aplicativo local.'});
     }catch{
       if(['GET','HEAD'].includes(req.method)){res.locals.data=data;next();return;}
@@ -285,6 +289,8 @@ export function createCloudApp(options:{auth?:ReturnType<typeof getCloudAuth>;st
   app.get('/api/v1/remote',(_req,res)=>res.json({state:'off',mode:null,publicUrl:null,expiresAt:null,activeSessions:0,message:'Abra o aplicativo no computador para gerar o link de pareamento. Depois conecte-o em Minha conta.'}));
   app.get('/api/v1/setup',(_req,res)=>res.json(res.locals.managed?{ready:false,next:'O servidor do WhatsApp não respondeu. Aguarde alguns minutos e atualize a página.',checks:[{key:'worker',label:'Servidor do WhatsApp',ready:false,detail:'Suas preferências estão salvas na conta. O servidor executa a captura e as publicações.',page:'sources'}]}:{ready:false,next:'Conecte seu computador em Minha conta para ativar o WhatsApp.',checks:[{key:'worker',label:'Computador conectado',ready:false,detail:'Suas preferências estão salvas na conta. O computador executa a captura e as publicações.',page:'sources'}]}));
   app.get('/api/v1/backup',(_req,res)=>{const data=res.locals.data as AccountData;res.json({schemaVersion:1,exportedAt:new Date().toISOString(),settings:data.settings,offers:data.offers,feedback:[],activity:data.activity});});
+  // Canais do WhatsApp live on the account's own computer/server; without it, say so plainly.
+  app.get('/api/v1/channels',(_req,res)=>res.json({available:false,engine:{provider:'offline',official:false,connected:false,detail:res.locals.managed?'O servidor do WhatsApp não respondeu agora. Os canais voltam a aparecer quando ele responder.':'Conecte seu computador ou seu servidor em Minha conta para usar os Canais do WhatsApp.'},globalPause:{paused:false,reason:null},channels:[],content:channelContentSupport} satisfies ChannelsOverview));
   app.use('/api/v1',(_req,res)=>res.status(409).json({error:'Conecte seu computador em Minha conta para usar esta função com seu WhatsApp. As preferências da conta já estão salvas no servidor.'}));
   app.use((error:unknown,_req:Request,res:Response,_next:NextFunction)=>{
     if(error instanceof ZodError){res.status(400).json({error:'Confira os dados informados.'});return;}
