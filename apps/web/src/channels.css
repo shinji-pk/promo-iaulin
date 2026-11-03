@@ -1,0 +1,58 @@
+/* Canais do WhatsApp — usa somente os tokens da marca (brand.css). */
+.ch-loading { display: flex; align-items: center; gap: 10px; padding: 28px; color: var(--plum-brand); }
+.ch-engine p { line-height: 1.55; }
+.ch-picker { max-width: 420px; margin: 4px 0 6px; }
+.ch-tabs { display: flex; gap: 8px; overflow-x: auto; padding: 6px 2px 12px; margin: 6px 0 14px; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+.ch-tab { display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; min-height: 44px; padding: 0 16px; border-radius: 14px; border: 1px solid var(--line); background: #fff; color: var(--plum-brand); font: 600 14px var(--font-body); cursor: pointer; transition: background .15s, color .15s, transform .15s; }
+.ch-tab:hover { background: var(--plum-light); }
+.ch-tab:focus-visible { outline: 3px solid rgba(255, 79, 123, .45); outline-offset: 2px; }
+.ch-tab.active { background: var(--night); color: #fff; border-color: var(--night); }
+.ch-tab.active .nav-count { background: var(--coupon); color: var(--plum-brand); }
+.ch-grid { align-items: start; }
+.ch-cards { display: grid; gap: 14px; }
+.ch-card { border: 1px solid var(--line); border-radius: 20px; padding: 16px; background: #fff; display: grid; gap: 10px; }
+.ch-card-head { display: flex; gap: 12px; align-items: center; min-width: 0; }
+.ch-card-head b { display: block; font-family: var(--font-display); font-size: 16px; color: var(--plum-brand); overflow-wrap: anywhere; }
+.ch-card-head small { color: var(--muted); overflow-wrap: anywhere; }
+.ch-avatar { flex: 0 0 40px; width: 40px; height: 40px; border-radius: 14px; display: grid; place-items: center; color: #fff; background: var(--cta); }
+.ch-badges { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ch-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ch-actions .button { min-height: 44px; }
+.ch-alert { display: flex; gap: 6px; align-items: flex-start; margin: 0; color: #ac7178; font-size: 13px; }
+.ch-rows { display: grid; gap: 8px; margin: 10px 0 14px; }
+.ch-row { display: flex; gap: 12px; justify-content: space-between; align-items: center; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--blush); text-align: left; width: 100%; min-width: 0; }
+.ch-row > div:first-child { display: grid; gap: 3px; min-width: 0; }
+.ch-row b { color: var(--plum-brand); overflow-wrap: anywhere; }
+.ch-row small { color: var(--muted); overflow-wrap: anywhere; line-height: 1.45; }
+.ch-post { cursor: pointer; font: inherit; }
+.ch-post:hover { background: var(--plum-light); }
+.ch-post:focus-visible { outline: 3px solid rgba(255, 79, 123, .45); outline-offset: 2px; }
+.ch-news { align-items: flex-start; }
+.ch-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px !important; }
+.ch-error { color: #ac7178 !important; }
+.ch-filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+.ch-filters .example-chip.selected, .ch-kinds .example-chip.selected { background: var(--night); color: #fff; border-color: var(--night); }
+.ch-kinds { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.ch-kinds .example-chip:disabled { opacity: .55; cursor: not-allowed; }
+.ch-emojis { display: flex; flex-wrap: wrap; gap: 4px; margin: -4px 0 12px; }
+.ch-emojis .icon-button { width: 44px; height: 44px; font-size: 20px; }
+.ch-upload { position: relative; cursor: pointer; overflow: hidden; max-width: 100%; }
+.ch-upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.ch-template { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; padding-top: 14px; border-top: 1px dashed rgba(59, 24, 56, .15); }
+.ch-template input { flex: 1 1 180px; min-height: 44px; }
+.ch-preview .whatsapp-bubble p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.ch-media { display: block; width: 100%; max-height: 320px; object-fit: contain; border-radius: 12px; margin-bottom: 8px; background: var(--plum-light); }
+.ch-media-file { margin: 0 0 8px; padding: 10px 12px; border-radius: 12px; background: rgba(255, 255, 255, .6); }
+.ch-schedule { display: inline-flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.ch-schedule input { min-height: 44px; max-width: 100%; }
+.ch-detail .timeline-list { margin-bottom: 8px; }
+.ch-metrics .metric-card { cursor: default; }
+.ch-level-warning { color: var(--amber) !important; }
+.ch-level-error { background: #fcf0f0 !important; color: #ac7178 !important; }
+@media (max-width: 700px) {
+  .ch-row { flex-direction: column; align-items: stretch; }
+  .ch-actions .button, .ch-actions a.button { flex: 1 1 auto; justify-content: center; }
+  .ch-schedule { width: 100%; }
+  .ch-schedule input { flex: 1 1 100%; }
+}
+@media (prefers-reduced-motion: reduce) { .ch-tab { transition: none; } }

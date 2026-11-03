@@ -25,9 +25,9 @@ async function request<T>(path: string, method = 'GET', body?: unknown): Promise
       ...(jsonBody !== undefined ? { body: JSON.stringify(jsonBody) } : {}),
       signal: AbortSignal.timeout(path === '/remote/start' ? 90000 : 30000),
     });
-  } catch { throw new Error('Não conseguimos acessar o aplicativo local. Confira se o PromoBridge está aberto no computador e tente novamente.'); }
+  } catch { throw new Error(remote ? 'Não conseguimos falar com o servidor agora. Confira sua internet e tente novamente.' : 'Não conseguimos acessar o aplicativo local. Confira se o PromoBridge está aberto no computador e tente novamente.'); }
   let data: any;
-  try { data = await response.json(); } catch { throw new ApiError('O aplicativo local não respondeu. Confira se o PromoBridge está aberto no computador.', response.status === 404 ? 404 : 502); }
+  try { data = await response.json(); } catch { throw new ApiError(remote ? 'O servidor respondeu de um jeito inesperado. Tente novamente em instantes.' : 'O aplicativo local não respondeu. Confira se o PromoBridge está aberto no computador.', response.status === 404 ? 404 : 502); }
   if (response.status === 401 && data.code === 'AUTH_REQUIRED') window.dispatchEvent(new Event('promobridge:session-expired'));
   if (!response.ok) throw new ApiError(typeof data.error === 'string' ? data.error : data.message || 'Não foi possível concluir esta ação.', response.status);
   return data as T;

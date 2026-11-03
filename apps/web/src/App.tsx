@@ -1,17 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Activity, ArrowRight, ArrowUpRight, BadgeCheck, Bell, Check, CheckCheck, ChevronDown, ChevronRight, CircleHelp, Coffee, Heart, LayoutDashboard, Leaf, Link2, ListChecks, LoaderCircle, Menu, MessageCircle, MessageSquareText, Pause, Play, Plus, QrCode, RefreshCw, Settings2, ShieldCheck, ShoppingBag, Sparkles, Store, Users, Wifi, X, Zap, type LucideIcon } from 'lucide-react';
+import { Activity, ArrowRight, ArrowUpRight, BadgeCheck, Bell, Check, CheckCheck, ChevronDown, ChevronRight, CircleHelp, Coffee, Heart, LayoutDashboard, Leaf, Link2, ListChecks, LoaderCircle, Megaphone, Menu, MessageCircle, MessageSquareText, Pause, Play, Plus, QrCode, RefreshCw, Settings2, ShieldCheck, ShoppingBag, Sparkles, Store, Users, Wifi, X, Zap, type LucideIcon } from 'lucide-react';
 import { platformIds, riskNoticeAccepted, type AffiliateConfig, type AppSnapshot, type Offer, type PlatformId, type Settings } from '../../../packages/shared/src/index.ts';
 import { RiskNoticeGate, acceptedRiskNotice } from './RiskNotice.tsx';
 import { api, initialize, isDemonstration } from './api.ts';
 import { useAccount } from './AccountGate.tsx';
 import { OfferDetail, OfferRow, OffersPage } from './Offers.tsx';
 import { LocalSetupModal, ManualOfferModal } from './FeaturePanels.tsx';
+import { ChannelsPage } from './Channels.tsx';
 import { AffiliatesPage, AudiencePage, AutomationPage, GeneralSettingsPage, HealthPage, MessagesPage, SourcesPage, type SettingsProps } from './Settings.tsx';
 import { Badge, Button, EmptyState, Field, Loading, Modal, SectionTitle, TextLink, timeAgo } from './ui.tsx';
 
-type Page = 'today' | 'queue' | 'discover' | 'published' | 'sources' | 'affiliates' | 'audience' | 'automation' | 'messages' | 'health' | 'settings';
+type Page = 'today' | 'queue' | 'discover' | 'published' | 'channels' | 'sources' | 'affiliates' | 'audience' | 'automation' | 'messages' | 'health' | 'settings';
 const navigation: { heading: string; items: { id: Page; label: string; icon: LucideIcon }[] }[] = [
   { heading: 'SEU DIA A DIA', items: [{ id: 'today', label: 'Hoje', icon: LayoutDashboard }, { id: 'queue', label: 'Fila de curadoria', icon: ListChecks }, { id: 'discover', label: 'Descobertas', icon: Sparkles }, { id: 'published', label: 'Publicados', icon: CheckCheck }] },
+  { heading: 'CANAIS DO WHATSAPP', items: [{ id: 'channels', label: 'Canais do WhatsApp', icon: Megaphone }] },
   { heading: 'DO SEU JEITO', items: [{ id: 'sources', label: 'Fontes & conexões', icon: Link2 }, { id: 'affiliates', label: 'Lojas & afiliados', icon: Store }, { id: 'audience', label: 'Audiência', icon: Users }, { id: 'automation', label: 'Automação', icon: Zap }, { id: 'messages', label: 'Mensagens', icon: MessageSquareText }] },
   { heading: 'SEMPRE POR PERTO', items: [{ id: 'health', label: 'Saúde & atividade', icon: Activity }, { id: 'settings', label: 'Configurações', icon: Settings2 }] },
 ];
@@ -96,7 +98,7 @@ export default function App() {
   async function backup() {
     try { const data = await api.get<unknown>('/backup'); const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })); const link = document.createElement('a'); link.href = url; link.download = `promobridge-${isDemonstration() ? 'demo-' : ''}${new Date().toISOString().slice(0, 10)}.json`; link.click(); window.setTimeout(() => URL.revokeObjectURL(url), 1000); notify('Seu backup foi preparado.'); } catch (error) { notify(errorMessage(error), true); }
   }
-  if (!snapshot || !draft) return initialError ? <div className="offline-state"><div className="offline-card"><span className="brand-mark">p<span>↗</span></span><h1>Vamos nos reconectar<span className="heading-dot">.</span></h1><p>{initialError}</p><div className="notice notice-subtle"><MonitorIcon /><p>O painel local precisa que o aplicativo esteja aberto no seu computador.</p></div><Button icon={RefreshCw} onClick={() => void boot()}>Tentar novamente</Button></div></div> : <Loading />;
+  if (!snapshot || !draft) return initialError ? <div className="offline-state"><div className="offline-card"><span className="brand-mark">p<span>↗</span></span><h1>Vamos nos reconectar<span className="heading-dot">.</span></h1><p>{initialError}</p><div className="notice notice-subtle"><MonitorIcon /><p>{window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'O painel local precisa que o aplicativo esteja aberto no seu computador.' : 'Confira sua internet. Seus dados continuam salvos na sua conta.'}</p></div><Button icon={RefreshCw} onClick={() => void boot()}>Tentar novamente</Button></div></div> : <Loading />;
   // Uma janela bloqueante por vez: se a conta está mostrando o código de recuperação (ou outra janela), o aviso aparece logo depois.
   if (!riskNoticeAccepted(snapshot.settings)) return account.dialogOpen ? null : <RiskNoticeGate onAccept={async () => {
     const saved = await api.put<Settings>('/settings', acceptedRiskNotice(snapshot.settings));
@@ -117,6 +119,7 @@ export default function App() {
         {refreshError && <div className="notice notice-warning" role="alert"><Wifi size={17} /><p>{refreshError} Os dados abaixo podem estar desatualizados.</p><Button variant="ghost" icon={RefreshCw} onClick={() => void refresh().catch(error => setRefreshError(errorMessage(error)))}>Tentar novamente</Button></div>}
         {page === 'today' && <Today snapshot={snapshot} go={go} onOpen={offer => setSelectedId(offer.id)} onSimulate={() => setSimulator(true)} onOnboard={() => setOnboarding(true)} onExamples={() => void loadExamples().catch(() => undefined)} busy={busy} today={today} />}
         {(page === 'queue' || page === 'discover' || page === 'published') && <OffersPage key={page} offers={snapshot.offers} kind={page} onOpen={offer => setSelectedId(offer.id)} onSimulate={() => setSimulator(true)} onAdd={() => setManualOffer(true)} query={query} setQuery={setQuery} />}
+        {page === 'channels' && <ChannelsPage notify={notify} onGoSources={() => go('sources')} />}
         {page === 'sources' && <SourcesPage {...settingsProps} cloudNeedsWorker={account.cloud && !account.workerConnected} managed={account.managed} onShowInstallGuide={() => setInstallGuideOpen(true)} onConnect={connect} onReset={reset} onGroups={groups} />}
         {page === 'affiliates' && <AffiliatesPage {...settingsProps} onCalibrate={calibrate} />}
         {page === 'audience' && <AudiencePage {...settingsProps} />}
