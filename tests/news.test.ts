@@ -31,7 +31,7 @@ describe('leitura segura de feeds RSS/Atom', () => {
     const privateFetch = createSafeFetcher({ lookup: async () => [{ address: '10.0.0.5', family: 4 }] });
     await expect(privateFetch('https://feed.exemplo.com.br/rss')).rejects.toThrow('não público');
     await expect(createSafeFetcher()('http://feed.exemplo.com.br/rss')).rejects.toThrow('HTTPS');
-    const respond = (headers: Record<string, string>, body: string) => vi.fn((_url: URL, _options: unknown, callback: (response: EventEmitter & Record<string, unknown>) => void) => {
+    const respond = (headers: Record<string, string>, body: string) => vi.fn((_url: URL, _options: unknown, callback: (response: any) => void) => {
       const request = Object.assign(new EventEmitter(), { end: () => {
         const response = Object.assign(new EventEmitter(), { statusCode: 200, headers, resume: () => {}, destroy: () => {} });
         callback(response); queueMicrotask(() => { response.emit('data', Buffer.from(body)); response.emit('end'); });
@@ -152,6 +152,7 @@ describe('monitoramento de notícias por canal', () => {
     await service.run(() => service.ai.saveKey('chave-propria-da-conta-123456'));
     await service.runNews(channel.id);
     const [post] = service.repo.listPosts({ channelId: channel.id });
+    expect(post.history.map(entry => entry.note).join(' | ')).not.toContain('IA não usada');
     expect(post.body).toContain('A inflação desacelerou em outubro, segundo a fonte.');
     expect(aiFetch).toHaveBeenCalledTimes(1);
     const request = aiFetch.mock.calls[0][1];

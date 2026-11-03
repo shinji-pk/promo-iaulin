@@ -115,9 +115,9 @@ export class NewsService {
     for (const entry of entries) {
       if (!entry.link) continue;
       const canonicalUrl = canonicalNewsUrl(entry.link);
-      const key = createHash('sha256').update(entry.guid ? `guid:${source.id}:${entry.guid}` : `url:${canonicalUrl}`).digest('hex');
-      const urlKey = createHash('sha256').update(`url:${canonicalUrl}`).digest('hex');
-      if (repo.hasNewsKey(channel.id, key) || repo.hasNewsKey(channel.id, urlKey)) continue;
+      // One row per canonical article URL; a repeated guid from the same source is also skipped.
+      const key = createHash('sha256').update(`url:${canonicalUrl}`).digest('hex');
+      if (repo.hasNewsKey(channel.id, key) || (entry.guid && recent.some(item => item.sourceId === source.id && item.guid === entry.guid))) continue;
       const score = scoreNews(entry, channel.editorial);
       // The same story already captured (from any source) is a duplicate; other outlets with a similar
       // headline count as corroboration, which is also credited back to the earlier items.
@@ -146,7 +146,6 @@ export class NewsService {
         duplicateOf: status === 'duplicate' ? sameStory?.id ?? null : null, corroboratingSources: corroborating.size, confirmation: corroborating.size ? 'corroborated' : 'single_source', postId: null,
       };
       repo.saveNews(item, key);
-      if (urlKey !== key && !repo.hasNewsKey(channel.id, urlKey)) repo.saveNews({ ...item, id: randomUUID(), status: 'duplicate', duplicateOf: item.id }, urlKey);
       recent.push(item);
       result.created++;
       if (status === 'duplicate') result.duplicates++;
