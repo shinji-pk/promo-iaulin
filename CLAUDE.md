@@ -17,5 +17,5 @@
 - Armazenamento: `apps/cloud/src/blob-store.ts` usa o **Neon** (tabela `promo_docs`, projeto shinji-promo-iaulin, banco `promo`) quando há `DATABASE_URL` e não há Blob; na Vercel continua o Blob.
 - O WhatsApp (Baileys) precisa de servidor sempre ligado: roda no computador da pessoa ou num servidor dela (Docker/Render/VPS), nunca na Cloudflare.
 - **Começa do zero (decisão da dona, 02/11/2026):** nenhum dado antigo do Blob é importado. A chave de autenticação na Cloudflare é derivada do banco (ou `PROMO_BETTER_AUTH_SECRET`, se existir).
-- Ao apontar o endereço final para a Cloudflare, trocar `BETTER_AUTH_URL` no `wrangler.toml`.
+- Endereço final: promo.shinjiapps.com aponta para a Cloudflare desde 10/11/2026 (`BETTER_AUTH_URL` no `wrangler.toml`; o pages.dev e o Emet entram em `BETTER_AUTH_ALLOWED_ORIGINS`).
 - Lugar sempre ligado: cada pessoa escolhe no guia **No meu computador** (programa Windows + pareamento) ou **Num servidor meu** (`POST /api/v1/account/server`: endereço HTTPS + chave `PROMOBRIDGE_CLOUD_TOKEN`, testada antes de salvar e guardada cifrada).

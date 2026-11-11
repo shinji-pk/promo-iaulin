@@ -4,6 +4,8 @@ compatibility_date = "2026-10-01"
 compatibility_flags = ["nodejs_compat", "enable_nodejs_http_modules", "enable_nodejs_http_server_modules"]
 
 [vars]
-# Endereço público da conta. Ao apontar promo.shinjiapps.com para a Cloudflare, trocar aqui.
-BETTER_AUTH_URL = "https://promo-iaulin.pages.dev"
+# Endereço público da conta (promo.shinjiapps.com aponta para a Cloudflare desde 10/11/2026).
+BETTER_AUTH_URL = "https://promo.shinjiapps.com"
+# Outros endereços que servem o mesmo Promo: o pages.dev e o Emet (que mostra o Promo em /promo/).
+BETTER_AUTH_ALLOWED_ORIGINS = "https://promo-iaulin.pages.dev,https://emet.shinjiapps.com"
 PROMO_STORE = "neon"
