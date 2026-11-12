@@ -1,0 +1,21 @@
+name: Shinji Reach QA
+on:
+  push:
+    branches: [shinji-reach]
+    paths:
+      - 'reach/**'
+      - '.github/workflows/reach-qa.yml'
+  workflow_dispatch:
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify syntax
+        run: npm run check --prefix reach
+      - name: Run app logic and HTTP tests
+        run: npm test --prefix reach
