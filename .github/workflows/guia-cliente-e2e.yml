@@ -15,6 +15,11 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+# Economiza minutos cancelando apenas a execucao obsoleta da mesma revisao.
+concurrency:
+  group: optimized-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validar-guia:
     runs-on: ubuntu-latest
