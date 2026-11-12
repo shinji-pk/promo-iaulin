@@ -22,5 +22,8 @@ test('HTTP smoke: health, assets, hardened headers and 404',async t=>{
  const js=await fetch(origin+'/app.js');assert.equal(js.status,200);assert.match(js.headers.get('content-type'),/javascript/);
  const css=await fetch(origin+'/style.css');assert.equal(css.status,200);assert.match(await css.text(),/focus-card/);
  const missing=await fetch(origin+'/missing-file-secret');assert.equal(missing.status,404);
+ const internal=await fetch(origin+'/server.mjs');assert.equal(internal.status,404,'server source must not be public');
+ const testFile=await fetch(origin+'/test/core.test.mjs');assert.equal(testFile.status,404,'test code must not be public');
+ const env=await fetch(origin+'/.env');assert.equal(env.status,404,'dotfiles must not be public');
  const traversal=await fetch(origin+'/%2E%2E/%2E%2E/etc/passwd');assert.notEqual(traversal.status,200);
 });
