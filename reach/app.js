@@ -18,7 +18,7 @@ const today=()=>new Date().toLocaleDateString('sv-SE',{timeZone:'America/Sao_Pau
 const dkey=x=>new Date(x).toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'});
 const notify=(message,bad=false)=>{const t=el('toast');t.textContent=message;t.style.borderColor=bad?'#d87583':'#4e7d90';t.classList.add('show');clearTimeout(notify.timer);notify.timer=setTimeout(()=>t.classList.remove('show'),3700)};
 const err=e=>notify(e?.message||String(e),true);
-const normalPhone=v=>{let p=String(v||'').replace(/[^\d]/g,'');if(p.startsWith('00'))p=p.slice(2);if(p.length===10||p.length===11)p='55'+p;return /^\d{12,15}$/.test(p)?p:null};
+const normalPhone=v=>{const input=String(v||'').trim(),international=input.startsWith('+')||input.startsWith('00');let p=input.replace(/[^\d]/g,'');if(p.startsWith('00'))p=p.slice(2);if(!international&&(p.length===10||p.length===11))p='55'+p;return /^\d{11,15}$/.test(p)?p:null};
 const statusTag=s=>s==='cliente'?'good':s==='interessado'||s==='negociando'?'blue':s==='nao_contatar'?'bad':s==='novo'?'':'warn';
 const leadName=l=>l.business?l.business:l.name;
 const daysSince=x=>(Date.now()-new Date(x).getTime())/86400000;
