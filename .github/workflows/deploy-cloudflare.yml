@@ -6,6 +6,11 @@ on:
       - main
   workflow_dispatch:
 
+# Publicacao continua automatica, mas cancela revisoes ultrapassadas.
+concurrency:
+  group: cloudflare-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
