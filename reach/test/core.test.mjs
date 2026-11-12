@@ -26,7 +26,7 @@ test('Brazilian and international WhatsApp numbers normalize without duplicated 
  assert.equal(normalPhone('+55 62 99999-1234'),'5562999991234');
  assert.equal(normalPhone('0055 62 99999 1234'),'5562999991234');
  assert.equal(normalPhone('+1 (212) 555-0000'),'12125550000');
- assert.equal(normalPhone('x'),'');
+ assert.equal(normalPhone('x'),null);
 });
 test('invalid phones rejected',()=>{
  assert.equal(normalPhone('abc'),null);
