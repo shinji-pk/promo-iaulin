@@ -9,6 +9,7 @@ http.createServer(async(req,res)=>{
     let pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
     if(pathname==='/health'){res.writeHead(200,{'content-type':'application/json'});res.end('{"status":"ok"}');return;}
     const f=pathname==='/'?'/index.html':pathname;
+    if(!new Set(['/index.html','/app.js','/style.css','/icon.svg','/manifest.json']).has(f))throw new Error('not a public asset');
     const resolved=path.resolve(root,'.'+f);
     if(!resolved.startsWith(root+path.sep))throw new Error('invalid path');
     const data=await readFile(resolved);
