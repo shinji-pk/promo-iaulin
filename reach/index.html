@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0a1020"><meta name="description" content="Gerencie leads, campanhas e contatos comerciais com organização e histórico.">
+<title>Shinji Reach — Relacionamentos que evoluem</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head><body>
+<div class="aurora a1"></div><div class="aurora a2"></div>
+<section id="auth" class="auth-wrap">
+<div class="auth-card"><div class="brand big"><span class="brand-icon">✦</span><span>shinji<span class="gradient-text">reach</span></span></div>
+<div class="smallcaps">SMART OUTREACH · CRM</div><h1>Seus contatos.<br><span class="gradient-text">Suas oportunidades.</span></h1>
+<p class="muted">Campanhas, listas e histórico em um só lugar. Acesse seus dados de qualquer dispositivo.</p>
+<form id="auth-form" class="stack">
+<label>E-mail<input id="auth-email" type="email" autocomplete="email" placeholder="seu@email.com" required></label>
+<label>Senha<input id="auth-password" type="password" autocomplete="current-password" minlength="6" placeholder="••••••••" required></label>
+<button class="primary full" id="auth-button" type="submit">Entrar na minha conta <span>↗</span></button>
+</form><div class="auth-actions"><button class="text-button" id="signup">Criar conta</button><button class="text-button" id="reset-pass">Esqueci minha senha</button></div><p class="tiny muted">Seus leads ficam no banco de dados com acesso exclusivo à sua conta.</p>
+</div>
+</section>
+<div id="app" class="app hidden">
+<aside class="sidebar">
+<div class="brand"><span class="brand-icon">✦</span><span>shinji<span class="gradient-text">reach</span></span></div>
+<div class="workspace-label">WORKSPACE <span class="dot"></span> ATIVO</div>
+<nav id="nav" aria-label="Navegação principal">
+<button class="nav-link active" data-view="dashboard"><span>◫</span> Visão geral</button>
+<button class="nav-link" data-view="campaigns"><span>◈</span> Campanhas</button>
+<button class="nav-link" data-view="leads"><span>◎</span> Contatos</button>
+<button class="nav-link" data-view="history"><span>◷</span> Histórico</button>
+<button class="nav-link" data-view="settings"><span>⚙</span> Configurações</button>
+</nav>
+<div class="side-bottom"><div class="side-tip"><span class="tip-icon">✧</span><strong>Contato inteligente</strong><p>Priorize pessoas que autorizaram mensagens. O histórico evita abordagens repetidas.</p></div><button id="logout" class="user-line"><span class="avatar">S</span><span id="user-email" class="ellipsis"></span><span>↪</span></button></div>
+</aside>
+<div class="shell"><header class="topbar"><button id="menu-toggle" aria-label="Abrir menu" class="icon-btn mobile-only">☰</button><div class="crumb">Workspace <span>›</span> <strong id="page-crumb">Visão geral</strong></div><div class="top-right"><span class="live"><i></i> Banco sincronizado</span><span id="today-label"></span></div></header>
+<main id="main" class="main-content"></main></div>
+</div>
+<dialog id="dialog"><form id="dialog-form" class="modal"><div class="modal-top"><h2 id="dialog-title"></h2><button id="close-modal" type="button" class="icon-btn">✕</button></div><div id="dialog-body"></div><div class="modal-actions"><button type="button" class="secondary" id="cancel-modal">Cancelar</button><button class="primary" type="submit" id="dialog-submit">Salvar alterações</button></div></form></dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.8/dist/umd/supabase.min.js"></script><script src="/app.js" defer></script>
+</body></html>
