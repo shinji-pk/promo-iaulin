@@ -14,12 +14,13 @@ const code=[
  part('const normalPhone=','\nconst statusTag='),
  part('const template=','\nconst quoteCSV='),
  part('const esc=','\nconst fmtDate='),
+ part('const quoteCSV=','\nconst isEligible='),
  part('function parseCSV(text)','\nfunction parseVCF(raw)'),
  part('function parseVCF(raw)','\nasync function readImportFile(file)'),
  part('function analyzeImportRows(rows,owner)','\nfunction importModal()')
 ].join('\n');
-const helpers=vm.runInNewContext(code+'\n({normalPhone,template,esc,parseCSV,parseVCF,analyzeImportRows})');
-const {normalPhone,template,esc,parseCSV,parseVCF,analyzeImportRows}=helpers;
+const helpers=vm.runInNewContext(code+'\n({normalPhone,template,esc,safeCSV,parseCSV,parseVCF,analyzeImportRows})');
+const {normalPhone,template,esc,safeCSV,parseCSV,parseVCF,analyzeImportRows}=helpers;
 
 test('Brazilian and international WhatsApp numbers normalize without duplicated country code',()=>{
  assert.equal(normalPhone('(62) 99999-1234'),'5562999991234');
@@ -76,4 +77,23 @@ test('file imports use database-side idempotency',()=>{
  const section=part('function importModal()','\nfunction downloadTemplate()');
  assert.match(section,/reach_mark_imported_sent/);
  assert.match(section,/id="import-preview"/);
+});
+
+
+test('CSV exports neutralize spreadsheet formulas without losing regular names',()=>{
+ assert.equal(safeCSV('=HYPERLINK("https://example.invalid")'),'"\'=HYPERLINK(""https://example.invalid"")"');
+ assert.equal(safeCSV('+SUM(1,1)'),'"\' +SUM(1,1)"'.replace("' ","'"));
+ assert.equal(safeCSV('Empresa A'),'"Empresa A"');
+ assert.equal(safeCSV('Contato; RJ'),'"Contato; RJ"');
+});
+test('WhatsApp conversation initiation is gated by atomic consent and daily-start budget',()=>{
+ const section=part('async function openWA(id)','\nasync function markSent(id)');
+ assert.match(section,/sb\.rpc\('reach_prepare_conversation'/);
+ assert.match(section,/window\.open\('about:blank'/);
+ assert.doesNotMatch(section,/\.from\('reach_events'\)\.insert/);
+});
+test('dashboard uses server-derived daily metrics, not only the 5000 loaded history records',()=>{
+ const section=part('async function reload()','\nasync function authBoot()');
+ assert.match(section,/sb\.rpc\('reach_today_metrics'/);
+ assert.doesNotMatch(section,/\.select\('id',\{count:'exact',head:true\}\)/);
 });
